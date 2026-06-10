@@ -45,7 +45,33 @@ export default function DashboardPage() {
     fatGoal
   };
 
-  const insight = mockCoachInsights[0];
+  // Dynamic personalized coach insight based on user profile
+  let insightMessage = "Olá! Registe o seu perfil ou inicie sessão para receber conselhos de IA totalmente personalizados com base na sua biometria.";
+
+  if (profile) {
+    const bmi = (profile.weight / ((profile.height / 100) ** 2)).toFixed(1);
+    const ageMessage = profile.age >= 35 
+      ? `Aos ${profile.age} anos, a otimização metabólica e a preservação de massa muscular são as nossas prioridades clínicas.`
+      : `Aos ${profile.age} anos, o seu rendimento físico e recuperação estão no nível ideal para aceleração de resultados.`;
+
+    const goalMessage = profile.goal === 'lose'
+      ? `Para perder peso de forma saudável, o seu plano está regulado para ${caloriesGoal} kcal. Mantenha o foco no défice e no treino de hoje.`
+      : profile.goal === 'gain'
+      ? `Para potenciar o ganho de massa magra, o seu alvo de ${proteinGoal}g de proteína é crucial. Foco na consistência!`
+      : `Focado em manutenção de peso. A meta de ${caloriesGoal} kcal garante estabilidade hormonal e energia duradoura.`;
+
+    const restrictionsMessage = profile.restrictions.length > 0
+      ? ` As suas restrições (${profile.restrictions.join(', ')}) foram ativadas no plano alimentar.`
+      : '';
+
+    insightMessage = `Olá, ${userName}! ${ageMessage} ${goalMessage} O seu IMC atual é ${bmi}.${restrictionsMessage}`;
+  }
+
+  const insight = {
+    message: insightMessage,
+    type: 'general' as const,
+    timestamp: new Date()
+  };
 
   return (
     <div className="px-4 md:px-10 max-w-[1280px] mx-auto space-y-12 py-8 page-enter">
