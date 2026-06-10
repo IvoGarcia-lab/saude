@@ -1,12 +1,96 @@
 'use client';
 
-import { Sparkles, ChevronRight, LogOut, Trash2, Link, Shield, User } from 'lucide-react';
-import { mockUser, mockCoachInsights } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Sparkles, Save, LogOut, Shield, User, Loader2, Check } from 'lucide-react';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { cn } from '@/lib/utils';
+import type { UserProfile } from '@/lib/types';
+
+const allRestrictions = ['Vegan', 'Lactose', 'Glúten', 'Keto', 'Paleo', 'Frutos do Mar'];
 
 export default function ProfilePage() {
-  const user = mockUser;
-  const insight = mockCoachInsights[1];
+  const { profile, setProfile, isDemo, user: firebaseUser, signOut } = useAuth();
+  const router = useRouter();
+
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
+  const [goal, setGoal] = useState<'lose' | 'maintain' | 'gain'>('maintain');
+  const [selectedRestrictions, setSelectedRestrictions] = useState<string[]>([]);
+  const [medication, setMedication] = useState('');
+
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  // Load profile values on mount/load
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setAge(profile.age ? String(profile.age) : '');
+      setWeight(profile.weight ? String(profile.weight) : '');
+      setHeight(profile.height ? String(profile.height) : '');
+      setGoal(profile.goal || 'maintain');
+      setSelectedRestrictions(profile.restrictions || []);
+      setMedication(profile.medication || '');
+    }
+  }, [profile]);
+
+  const toggleRestriction = (r: string) => {
+    setSelectedRestrictions((prev) =>
+      prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]
+    );
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setSuccess(false);
+
+    const updatedProfile: UserProfile = {
+      uid: profile?.uid || firebaseUser?.uid || 'demo-user-001',
+      name,
+      email: profile?.email || firebaseUser?.email || 'demo@example.com',
+      age: Number(age) || 30,
+      weight: Number(weight) || 70,
+      height: Number(height) || 170,
+      goal,
+      restrictions: selectedRestrictions,
+      medication,
+      onboardingComplete: true,
+      createdAt: profile?.createdAt || new Date(),
+      updatedAt: new Date(),
+    };
+
+    try {
+      // 1. Save locally in State
+      setProfile(updatedProfile);
+
+      // 2. If not demo mode, save to Firebase Firestore
+      if (!isDemo && firebaseUser) {
+        const { getFirebaseDb } = await import('@/lib/firebase');
+        const { doc, setDoc } = await import('firebase/firestore');
+        const db = getFirebaseDb();
+        await setDoc(doc(db, 'profiles', firebaseUser.uid), {
+          ...updatedProfile,
+          updatedAt: new Date(),
+        }, { merge: true });
+      }
+
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Erro ao guardar perfil:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/login');
+  };
 
   return (
     <div className="px-4 md:px-10 max-w-2xl mx-auto py-8 page-enter space-y-8">
@@ -16,135 +100,186 @@ export default function ProfilePage() {
           <div className="w-24 h-24 bg-primary-container/20 rounded-full flex items-center justify-center overflow-hidden">
             <User size={40} className="text-primary-container" />
           </div>
-          <button className="absolute bottom-0 right-0 bg-primary-container text-white p-1.5 rounded-full hover:opacity-90 transition-opacity">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5Z" />
-            </svg>
-          </button>
         </div>
-        <h2 className="font-display text-xl font-semibold text-on-surface">{user.name}</h2>
-        <div className="flex gap-2 mt-2">
-          <span className="bg-secondary-container/30 text-on-secondary-container text-xs font-semibold px-3 py-1 rounded-full">
-            Peso: {user.weight}kg
-          </span>
-          <span className="bg-secondary-container/30 text-on-secondary-container text-xs font-semibold px-3 py-1 rounded-full">
-            Altura: {user.height}cm
-          </span>
-        </div>
-      </div>
-
-      {/* ---- Coach Insight ---- */}
-      <div className="bg-ai-indigo/5 border border-ai-indigo/10 rounded-xl p-4 flex gap-3 items-start">
-        <Sparkles size={18} className="text-ai-indigo shrink-0 mt-0.5" fill="currentColor" />
-        <p className="text-on-surface text-[14px] leading-6">
-          <span className="text-ai-indigo font-semibold">Coach Insight:</span> {insight.message}
+        <h2 className="font-display text-2xl font-bold text-on-surface">
+          {name || 'O meu Perfil'}
+        </h2>
+        <p className="text-on-surface-variant text-sm mt-1">
+          {isDemo ? '🎯 Sessão de Demonstração' : profile?.email}
         </p>
       </div>
 
-      {/* ---- Biometric Data ---- */}
-      <section>
-        <h3 className="font-display text-lg font-semibold text-on-surface mb-4">
-          Dados Biométricos e Clínicos
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="bg-surface-container-low rounded-xl p-4 flex items-center justify-between">
-            <div>
-              <p className="text-on-surface-variant text-xs font-semibold">Idade</p>
-              <p className="text-on-surface font-semibold">{user.age} anos</p>
-            </div>
-            <ChevronRight size={18} className="text-outline-variant" />
+      {/* ---- Edit Form ---- */}
+      <form onSubmit={handleSave} className="space-y-6">
+        {/* Biometrics */}
+        <div className="bg-white border border-outline-variant/30 rounded-2xl p-6 space-y-4 shadow-sm">
+          <h3 className="font-display text-lg font-semibold text-primary mb-2 flex items-center gap-2">
+            Identidade e Biometria
+          </h3>
+
+          <div className="space-y-2">
+            <label className="text-[13px] font-semibold text-on-surface-variant tracking-wide">
+              Nome
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="João Silva"
+              required
+              className="w-full bg-surface-container-low border-none rounded-xl p-3.5 text-on-surface outline-none focus:ring-2 focus:ring-primary transition-shadow"
+            />
           </div>
-          <div className="bg-surface-container-low rounded-xl p-4">
-            <p className="text-on-surface-variant text-xs font-semibold mb-2">
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-[13px] font-semibold text-on-surface-variant tracking-wide">
+                Idade
+              </label>
+              <input
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="Anos"
+                required
+                className="w-full bg-surface-container-low border-none rounded-xl p-3.5 text-on-surface outline-none focus:ring-2 focus:ring-primary transition-shadow"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[13px] font-semibold text-on-surface-variant tracking-wide">
+                Peso (kg)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="00.0"
+                required
+                className="w-full bg-surface-container-low border-none rounded-xl p-3.5 text-on-surface outline-none focus:ring-2 focus:ring-primary transition-shadow"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[13px] font-semibold text-on-surface-variant tracking-wide">
+                Altura (cm)
+              </label>
+              <input
+                type="number"
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                placeholder="000"
+                required
+                className="w-full bg-surface-container-low border-none rounded-xl p-3.5 text-on-surface outline-none focus:ring-2 focus:ring-primary transition-shadow"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Goal */}
+        <div className="bg-white border border-outline-variant/30 rounded-2xl p-6 space-y-4 shadow-sm">
+          <h3 className="font-display text-lg font-semibold text-primary mb-2">
+            Objetivo de Saúde
+          </h3>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { key: 'lose' as const, label: 'Perder Peso' },
+              { key: 'maintain' as const, label: 'Manter' },
+              { key: 'gain' as const, label: 'Ganhar Massa' },
+            ].map((g) => (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => setGoal(g.key)}
+                className={cn(
+                  'py-3 rounded-xl text-xs font-bold transition-all border active:scale-95',
+                  goal === g.key
+                    ? 'bg-primary-container text-white border-transparent'
+                    : 'bg-transparent border-outline-variant text-on-surface-variant hover:bg-surface-container-low'
+                )}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Restrictions & Medications */}
+        <div className="bg-white border border-outline-variant/30 rounded-2xl p-6 space-y-4 shadow-sm">
+          <h3 className="font-display text-lg font-semibold text-primary mb-2">
+            Restrições e Saúde
+          </h3>
+
+          <div className="space-y-3">
+            <label className="text-[13px] font-semibold text-on-surface-variant block">
               Restrições Alimentares
-            </p>
+            </label>
             <div className="flex flex-wrap gap-2">
-              {user.restrictions.map((r) => (
-                <span
-                  key={r}
-                  className="bg-secondary-container text-on-secondary-container text-xs font-semibold px-3 py-1 rounded-full"
-                >
-                  {r}
-                </span>
-              ))}
+              {allRestrictions.map((r) => {
+                const active = selectedRestrictions.includes(r);
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => toggleRestriction(r)}
+                    className={cn(
+                      'px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95',
+                      active
+                        ? 'bg-secondary-container text-on-secondary-container border border-transparent'
+                        : 'bg-transparent border border-outline-variant text-on-surface-variant hover:bg-surface-container-low'
+                    )}
+                  >
+                    {r}
+                  </button>
+                );
+              })}
             </div>
           </div>
-          <div className="md:col-span-2 bg-surface-container-low rounded-xl p-4 flex items-center justify-between">
-            <div>
-              <p className="text-on-surface-variant text-xs font-semibold">Medicação Ativa</p>
-              <p className="text-on-surface">{user.medication || 'Nenhuma registada'}</p>
-            </div>
-            <button className="text-secondary text-sm font-semibold">+ Adicionar</button>
-          </div>
-        </div>
-      </section>
 
-      {/* ---- Health Goal ---- */}
-      <section>
-        <h3 className="font-display text-lg font-semibold text-on-surface mb-4">
-          Objetivo de Saúde
-        </h3>
-        <div className="bg-surface-container-low rounded-xl p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary-container text-white p-2.5 rounded-full">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-                <polyline points="16 7 22 7 22 13" />
-              </svg>
-            </div>
-            <div>
-              <p className="font-semibold text-on-surface">
-                {user.goal === 'gain'
-                  ? 'Ganho de Massa Magra'
-                  : user.goal === 'lose'
-                  ? 'Perda de Gordura'
-                  : 'Manutenção de Peso'}
-              </p>
-              <p className="text-on-surface-variant text-sm">
-                Meta: +3kg de músculo em 3 meses
-              </p>
-            </div>
+          <div className="space-y-2 pt-2">
+            <label className="text-[13px] font-semibold text-on-surface-variant block">
+              Medicação Ativa
+            </label>
+            <textarea
+              value={medication}
+              onChange={(e) => setMedication(e.target.value)}
+              placeholder="Ex: Nenhuma, Metformina 500mg..."
+              rows={2}
+              className="w-full bg-surface-container-low border-none rounded-xl p-3.5 text-on-surface outline-none focus:ring-2 focus:ring-primary transition-shadow resize-none"
+            />
           </div>
-          <button className="bg-secondary-container text-on-secondary-container text-xs font-bold px-4 py-2 rounded-full">
-            Alterar
-          </button>
         </div>
-      </section>
 
-      {/* ---- Preferences ---- */}
-      <section>
-        <h3 className="font-display text-lg font-semibold text-on-surface mb-4">
-          Preferências
-        </h3>
-        <div className="bg-white border border-outline-variant/20 rounded-xl overflow-hidden divide-y divide-surface-container">
-          <button className="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
-            <div className="flex items-center gap-3">
-              <Link size={18} className="text-on-surface-variant" />
-              <span className="text-on-surface text-[15px]">
-                Sincronização de Dispositivos
-              </span>
-            </div>
-            <span className="text-secondary text-sm font-semibold">
-              Conectado (Apple Health)
-            </span>
-          </button>
-          <button className="w-full flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors">
-            <div className="flex items-center gap-3">
-              <Shield size={18} className="text-on-surface-variant" />
-              <span className="text-on-surface text-[15px]">Privacidade e Dados</span>
-            </div>
-            <ChevronRight size={18} className="text-outline-variant" />
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full bg-primary-container text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-primary/10 text-[15px]"
+          >
+            {saving ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : success ? (
+              <>
+                <Check size={18} />
+                Perfil Guardado!
+              </>
+            ) : (
+              <>
+                <Save size={18} />
+                Guardar Alterações
+              </>
+            )}
           </button>
         </div>
-      </section>
+      </form>
 
       {/* ---- Danger Zone ---- */}
-      <div className="space-y-3 pt-4">
-        <button className="w-full text-center text-secondary font-semibold py-3 hover:underline transition-colors">
+      <div className="bg-white border border-outline-variant/30 rounded-2xl p-6 shadow-sm space-y-4">
+        <button
+          onClick={handleSignOut}
+          className="w-full text-center text-secondary font-semibold py-3 border border-outline-variant rounded-xl hover:bg-surface-container-low transition-colors"
+        >
           Terminar Sessão
-        </button>
-        <button className="w-full text-center text-error/60 text-sm font-semibold py-2 hover:text-error transition-colors">
-          Apagar Conta Permanentemente
         </button>
       </div>
     </div>

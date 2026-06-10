@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 
 export function TopBar() {
   const [scrolled, setScrolled] = useState(false);
@@ -31,15 +32,16 @@ export function TopBar() {
         <h1 className="font-display text-xl font-bold text-primary tracking-tight">
           O Meu Coach Inteligente
         </h1>
-        <button
-          className="p-2 rounded-full hover:bg-surface-container-high transition-colors active:scale-95"
+        <Link
+          href="/profile"
+          className="p-2 rounded-full hover:bg-surface-container-high transition-colors active:scale-95 flex items-center justify-center"
           aria-label="Perfil"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary">
             <circle cx="12" cy="8" r="4" />
             <path d="M20 21a8 8 0 1 0-16 0" />
           </svg>
-        </button>
+        </Link>
       </div>
     </header>
   );
