@@ -599,66 +599,156 @@ export default function CalendarPage() {
       }
 
       // 1. Fetch meal suggestion
-      const mealsRes = await fetch('/api/suggest-meals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          caloriesGoal: calories,
-          proteinGoal: protein,
-          carbsGoal: carbs,
-          fatGoal: fat,
-          restrictions: profile?.restrictions || [],
-        }),
-      });
-      const mealsData = await mealsRes.json();
+      let mealsData: any = { success: false, data: { meals: [] } };
+      try {
+        const mealsRes = await fetch('/api/suggest-meals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            caloriesGoal: calories,
+            proteinGoal: protein,
+            carbsGoal: carbs,
+            fatGoal: fat,
+            restrictions: profile?.restrictions || [],
+          }),
+        });
+        mealsData = await mealsRes.json();
+      } catch (err) {
+        console.error('Error fetching meals suggestion:', err);
+      }
       
       // 2. Fetch workout suggestion
-      const workoutRes = await fetch('/api/generate-workout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          goal: profile?.goal || 'maintain',
-          experience: 'intermediate',
-          schedule: '3x',
-          restrictions: profile?.restrictions || [],
-          medication: profile?.medication || '',
-        }),
-      });
-      const workoutData = await workoutRes.json();
+      let workoutData: any = { success: false, data: null };
+      try {
+        const workoutRes = await fetch('/api/generate-workout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            goal: profile?.goal || 'maintain',
+            experience: 'intermediate',
+            schedule: '3x',
+            restrictions: profile?.restrictions || [],
+            medication: profile?.medication || '',
+          }),
+        });
+        workoutData = await workoutRes.json();
+      } catch (err) {
+        console.error('Error fetching workout suggestion:', err);
+      }
 
       const targetDateStr = activeDateStr;
       const newEvents: CalendarEvent[] = [];
 
-      if (mealsData.success && mealsData.data?.meals) {
-        mealsData.data.meals.forEach((meal: any) => {
-          const mealTypeEmoji = meal.type === 'pequeno-almoço' ? '🌅' : meal.type === 'almoço' ? '🍽️' : meal.type === 'jantar' ? '🌙' : '🍎';
-          const time = meal.type === 'pequeno-almoço' ? '08:00' : meal.type === 'almoço' ? '13:00' : meal.type === 'jantar' ? '20:00' : '17:00';
-          
-          // Automatically scale proposed meals to the user's daily budget targets
-          const targetKcal = getMealTargetKcal(meal.type, dailyCalorieTarget);
-          const scale = targetKcal / meal.totalCalories;
-          const scaledCalories = targetKcal;
-          const scaledProtein = Math.round(meal.totalProtein * scale);
-          const scaledCarbs = Math.round(meal.totalCarbs * scale);
-          const scaledFat = Math.round(meal.totalFat * scale);
-          const scaledItems = meal.items.map((item: any) => {
-            const quantityStr = item.quantity || '';
-            const scaledQuantity = quantityStr.replace(/(\d+)\s*(g|ml|scoop)/g, (match: string, num: string, unit: string) => {
-              const scaledNum = Math.round(parseFloat(num) * scale);
-              return `${scaledNum} ${unit}`;
-            });
-            return { ...item, quantity: scaledQuantity };
-          });
+      const mealsList = [...(mealsData.success && mealsData.data?.meals ? mealsData.data.meals : [])];
+      const typesPresent = mealsList.map(m => m.type.toLowerCase());
 
-          newEvents.push({
-            title: `${mealTypeEmoji} Proposto: ${meal.title} (${scaledCalories} kcal)`,
-            type: 'meal',
-            dateStr: targetDateStr,
-            timeStr: time,
-            description: `Alimentos: ${scaledItems.map((i: any) => `${i.name} (${i.quantity})`).join(', ')}.\nMacros: ${scaledCalories} kcal, P: ${scaledProtein}g, C: ${scaledCarbs}g, G: ${scaledFat}g\nPrep: ${meal.instructions}`,
+      // Complement missing categories to cover 100% of the day's meals
+      if (!typesPresent.includes('pequeno-almoço')) {
+        const fallback = recipes.find(r => r.category === 'Pequeno-almoço');
+        if (fallback) {
+          mealsList.push({
+            type: 'pequeno-almoço',
+            title: fallback.title,
+            totalCalories: fallback.calories,
+            totalProtein: fallback.protein,
+            totalCarbs: fallback.carbs,
+            totalFat: fallback.fat,
+            items: fallback.ingredients.split(',').map(i => ({ name: i.trim(), quantity: '1 dose' })),
+            instructions: fallback.prep
           });
-        });
+        }
       }
+
+      if (!typesPresent.includes('almoço')) {
+        const fallback = recipes.find(r => r.category === 'Almoço / Jantar');
+        if (fallback) {
+          mealsList.push({
+            type: 'almoço',
+            title: fallback.title,
+            totalCalories: fallback.calories,
+            totalProtein: fallback.protein,
+            totalCarbs: fallback.carbs,
+            totalFat: fallback.fat,
+            items: fallback.ingredients.split(',').map(i => ({ name: i.trim(), quantity: '1 dose' })),
+            instructions: fallback.prep
+          });
+        }
+      }
+
+      if (!typesPresent.includes('jantar')) {
+        const fallback = recipes.filter(r => r.category === 'Almoço / Jantar')[1] || recipes.find(r => r.category === 'Almoço / Jantar');
+        if (fallback) {
+          mealsList.push({
+            type: 'jantar',
+            title: fallback.title,
+            totalCalories: fallback.calories,
+            totalProtein: fallback.protein,
+            totalCarbs: fallback.carbs,
+            totalFat: fallback.fat,
+            items: fallback.ingredients.split(',').map(i => ({ name: i.trim(), quantity: '1 dose' })),
+            instructions: fallback.prep
+          });
+        }
+      }
+
+      if (!typesPresent.includes('snack') && !typesPresent.includes('lanche')) {
+        const fallback = recipes.find(r => r.category === 'Snack / Lanche');
+        if (fallback) {
+          mealsList.push({
+            type: 'snack',
+            title: fallback.title,
+            totalCalories: fallback.calories,
+            totalProtein: fallback.protein,
+            totalCarbs: fallback.carbs,
+            totalFat: fallback.fat,
+            items: fallback.ingredients.split(',').map(i => ({ name: i.trim(), quantity: '1 dose' })),
+            instructions: fallback.prep
+          });
+        }
+      }
+
+      // Propose meals
+      mealsList.forEach((meal: any) => {
+        const mealTypeEmoji = meal.type === 'pequeno-almoço' ? '🌅' : meal.type === 'almoço' ? '🍽️' : meal.type === 'jantar' ? '🌙' : '🍎';
+        const time = meal.type === 'pequeno-almoço' ? '08:00' : meal.type === 'almoço' ? '13:00' : meal.type === 'jantar' ? '20:00' : '17:00';
+        
+        const targetKcal = getMealTargetKcal(meal.type, dailyCalorieTarget);
+        const scale = targetKcal / meal.totalCalories;
+        const scaledCalories = targetKcal;
+        const scaledProtein = Math.round(meal.totalProtein * scale);
+        const scaledCarbs = Math.round(meal.totalCarbs * scale);
+        const scaledFat = Math.round(meal.totalFat * scale);
+        const scaledItems = meal.items.map((item: any) => {
+          const quantityStr = item.quantity || '';
+          const scaledQuantity = quantityStr.replace(/(\d+)\s*(g|ml|scoop)/g, (match: string, num: string, unit: string) => {
+            const scaledNum = Math.round(parseFloat(num) * scale);
+            return `${scaledNum} ${unit}`;
+          });
+          return { ...item, quantity: scaledQuantity };
+        });
+
+        newEvents.push({
+          title: `${mealTypeEmoji} Proposto: ${meal.title} (${scaledCalories} kcal)`,
+          type: 'meal',
+          dateStr: targetDateStr,
+          timeStr: time,
+          description: `Alimentos: ${scaledItems.map((i: any) => `${i.name} (${i.quantity})`).join(', ')}.\nMacros: ${scaledCalories} kcal, P: ${scaledProtein}g, C: ${scaledCarbs}g, G: ${scaledFat}g\nPrep: ${meal.instructions}`,
+          completed: false
+        });
+      });
+
+      // Propose water automatically (4 events of 500ml = 2.0L total)
+      const waterTimes = ['09:00', '12:00', '15:00', '18:00'];
+      waterTimes.forEach(time => {
+        newEvents.push({
+          title: '💧 Água: 500 ml',
+          type: 'water',
+          dateStr: targetDateStr,
+          timeStr: time,
+          description: 'Consumo de água proposto automaticamente.',
+          completed: false
+        });
+      });
 
       if (workoutData.success && workoutData.data?.workout) {
         newEvents.push({
@@ -667,6 +757,7 @@ export default function CalendarPage() {
           dateStr: targetDateStr,
           timeStr: '18:30',
           description: `Exercícios:\n${workoutData.data.workout.exercises.map((e: any) => `- ${e.name}: ${e.sets} séries x ${e.reps} (${e.rest} rest)`).join('\n')}`,
+          completed: false
         });
       }
 
@@ -692,6 +783,36 @@ export default function CalendarPage() {
       console.error('Erro ao propor plano por IA:', err);
     } finally {
       setProposingPlan(false);
+    }
+  };
+
+  const handleToggleEventCompleted = async (event: CalendarEvent, localIndex: number) => {
+    const updatedCompleted = !event.completed;
+    
+    // Update local state
+    const updatedEvents = events.map((e, idx) => {
+      if (idx === localIndex || (e.id && e.id === event.id)) {
+        return { ...e, completed: updatedCompleted };
+      }
+      return e;
+    });
+    setEvents(updatedEvents);
+
+    if (isDemo || !firebaseUser) {
+      localStorage.setItem('demo_events', JSON.stringify(updatedEvents));
+    } else {
+      try {
+        const { getFirebaseDb } = await import('@/lib/firebase');
+        const { doc, updateDoc } = await import('firebase/firestore');
+        const db = getFirebaseDb();
+        if (event.id) {
+          await updateDoc(doc(db, 'events', event.id), {
+            completed: updatedCompleted,
+          });
+        }
+      } catch (err) {
+        console.error('Erro ao atualizar estado do evento:', err);
+      }
     }
   };
 
@@ -1076,30 +1197,33 @@ export default function CalendarPage() {
                       key={e.id || idx}
                       className="p-3 border rounded-xl flex items-start justify-between gap-3 hover:bg-surface-container-low transition-colors"
                     >
-                      <div className="flex gap-3">
-                        <div
+                      <div className="flex gap-3 items-start flex-1 cursor-pointer" onClick={() => handleToggleEventCompleted(e, events.indexOf(e))}>
+                        <button
+                          type="button"
                           className={cn(
-                            'w-2.5 h-2.5 rounded-full mt-1.5 shrink-0',
-                            e.type === 'workout'
-                              ? 'bg-primary-container'
-                              : e.type === 'meal'
-                              ? 'bg-alert-gold'
-                              : e.type === 'water'
-                              ? 'bg-blue-500'
-                              : e.type === 'assessment'
-                              ? 'bg-medical-green'
-                              : 'bg-outline'
+                            "w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-all",
+                            e.completed
+                              ? "bg-medical-green border-medical-green text-white"
+                              : "border-outline hover:border-primary"
                           )}
-                        />
-                        <div>
-                          <p className="font-semibold text-on-surface text-[14px]">
+                        >
+                          {e.completed && <Check size={12} />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            "font-semibold text-[14px]",
+                            e.completed ? "text-on-surface-variant/50 line-through" : "text-on-surface"
+                          )}>
                             {e.title}
                           </p>
                           <p className="text-on-surface-variant text-xs flex items-center gap-1 mt-1">
                             <Clock size={12} /> às {e.timeStr}
                           </p>
                           {e.description && (
-                            <p className="text-on-surface-variant text-[11px] mt-1.5 leading-4 whitespace-pre-line">
+                            <p className={cn(
+                              "text-[11px] mt-1.5 leading-4 whitespace-pre-line",
+                              e.completed ? "text-on-surface-variant/40" : "text-on-surface-variant"
+                            )}>
                               {e.description}
                             </p>
                           )}
