@@ -172,13 +172,23 @@ export default function DashboardPage() {
 
       {/* ---- Workout Suggestion + Activity ---- */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Workout card with image */}
+        {/* Workout card with background video */}
         <Link
           href="/workouts"
-          className="relative overflow-hidden rounded-2xl group cursor-pointer aspect-video md:aspect-auto min-h-[260px]"
+          className="relative overflow-hidden rounded-2xl group cursor-pointer aspect-video md:aspect-auto min-h-[260px] block"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary-container/60 to-secondary/50 flex flex-col justify-end p-6">
-            <span className="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-4 uppercase tracking-widest">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          >
+            <source src="/video/treino_de_força_funcionaal_cal.mp4" type="video/mp4" />
+            O seu navegador não suporta a tag de vídeo.
+          </video>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent flex flex-col justify-end p-6">
+            <span className="bg-primary-container text-white text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-4 uppercase tracking-widest">
               Sugestão de Hoje
             </span>
             <h3 className="font-display text-2xl font-semibold text-white mb-2">
