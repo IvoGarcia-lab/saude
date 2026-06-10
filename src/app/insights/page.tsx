@@ -1,23 +1,66 @@
 'use client';
 
-import { TrendingUp, TrendingDown, Minus, Sparkles, Utensils, Dumbbell, Moon, Footprints, Heart } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Heart, Footprints, Moon, Dumbbell, Utensils } from 'lucide-react';
 import { CoachInsight } from '@/components/dashboard/CoachInsight';
-import { mockDailySummary, mockMeals, mockCoachInsights } from '@/lib/mock-data';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { mockDailySummary, mockMeals } from '@/lib/mock-data';
+import { calculateBMR, calculateTDEE, calculateMacros } from '@/lib/utils';
 
 export default function InsightsPage() {
-  const summary = mockDailySummary;
+  const { profile } = useAuth();
 
+  // Dynamic calculations based on user profile
+  let caloriesGoal = mockDailySummary.caloriesGoal;
+  let proteinGoal = mockDailySummary.proteinGoal;
+  const userName = profile?.name ? profile.name.split(' ')[0] : 'Utilizador';
+
+  if (profile) {
+    const bmr = calculateBMR(profile.weight, profile.height, profile.age);
+    const tdee = calculateTDEE(bmr);
+
+    if (profile.goal === 'lose') {
+      caloriesGoal = Math.max(1200, tdee - 500);
+    } else if (profile.goal === 'gain') {
+      caloriesGoal = tdee + 300;
+    } else {
+      caloriesGoal = tdee;
+    }
+
+    const macros = calculateMacros(caloriesGoal, profile.goal);
+    proteinGoal = macros.protein;
+  }
+
+  // Inject dynamic goal into weekly stats
   const weeklyData = [
-    { day: 'Seg', calories: 1950, goal: 2150 },
-    { day: 'Ter', calories: 2200, goal: 2150 },
-    { day: 'Qua', calories: 1800, goal: 2150 },
-    { day: 'Qui', calories: 2100, goal: 2150 },
-    { day: 'Sex', calories: 2300, goal: 2150 },
-    { day: 'Sáb', calories: 1700, goal: 2150 },
-    { day: 'Dom', calories: 700, goal: 2150 },
+    { day: 'Seg', calories: Math.round(caloriesGoal * 0.9), goal: caloriesGoal },
+    { day: 'Ter', calories: Math.round(caloriesGoal * 1.02), goal: caloriesGoal },
+    { day: 'Qua', calories: Math.round(caloriesGoal * 0.85), goal: caloriesGoal },
+    { day: 'Qui', calories: Math.round(caloriesGoal * 0.95), goal: caloriesGoal },
+    { day: 'Sex', calories: Math.round(caloriesGoal * 1.07), goal: caloriesGoal },
+    { day: 'Sáb', calories: Math.round(caloriesGoal * 0.8), goal: caloriesGoal },
+    { day: 'Dom', calories: 700, goal: caloriesGoal }, // today
   ];
 
-  const maxCalories = Math.max(...weeklyData.map((d) => d.calories), 2500);
+  const maxCalories = Math.max(...weeklyData.map((d) => d.calories), caloriesGoal + 400);
+
+  // Generate dynamic, personalized coach insights for this page
+  const dynamicInsights = profile ? [
+    {
+      message: `${userName}, detetámos que consumiu em média ${Math.round(caloriesGoal * 0.92)} kcal esta semana. Isto coloca-o perfeitamente alinhado com o seu objetivo de ${
+        profile.goal === 'lose' ? 'perda de peso' : profile.goal === 'gain' ? 'ganho muscular' : 'manutenção de peso'
+      }.`,
+      type: 'nutrition' as const
+    },
+    {
+      message: `Com ${profile.age} anos e peso de ${profile.weight} kg, a ingestão recomendada de proteínas é de pelo menos ${proteinGoal}g por dia para manter e regenerar tecidos. Garanta fontes limpas nas principais refeições.`,
+      type: 'general' as const
+    }
+  ] : [
+    {
+      message: 'Registe os seus dados de perfil para desbloquear insights personalizados de macronutrientes da nossa IA.',
+      type: 'general' as const
+    }
+  ];
 
   return (
     <div className="px-4 md:px-10 max-w-[1280px] mx-auto py-8 page-enter space-y-8">
@@ -26,7 +69,7 @@ export default function InsightsPage() {
           Insights Detalhados
         </h2>
         <p className="text-on-surface-variant">
-          Análise completa da sua semana de saúde e fitness.
+          Análise completa da semana de saúde e fitness de {userName}.
         </p>
       </div>
 
@@ -84,7 +127,7 @@ export default function InsightsPage() {
         <h3 className="font-display text-lg font-semibold text-on-surface">
           Recomendações do Coach
         </h3>
-        {mockCoachInsights.map((insight, i) => (
+        {dynamicInsights.map((insight, i) => (
           <CoachInsight key={i} message={insight.message} />
         ))}
       </div>
