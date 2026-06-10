@@ -21,6 +21,15 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Active selected cell date in calendar (defaults to today)
+  const getTodayStr = () => {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  };
+  const [activeDateStr, setActiveDateStr] = useState<string>(getTodayStr());
+
   // New Event Form State
   const [showAddForm, setShowAddForm] = useState(false);
   const [title, setTitle] = useState('');
@@ -366,15 +375,21 @@ export default function CalendarPage() {
               const day = i + 1;
               const dateStr = formatDateString(year, month, day);
               const dayEvents = events.filter((e) => e.dateStr === dateStr);
+              const isSelected = activeDateStr === dateStr;
 
               return (
                 <div
                   key={`day-${day}`}
                   onClick={() => {
+                    setActiveDateStr(dateStr);
                     setSelectedDate(dateStr);
-                    setShowAddForm(true);
                   }}
-                  className="aspect-square border border-surface-container hover:border-primary/45 rounded-lg p-1.5 flex flex-col justify-between cursor-pointer hover:bg-surface-container-lowest transition-all"
+                  className={cn(
+                    "aspect-square border rounded-lg p-1.5 flex flex-col justify-between cursor-pointer transition-all",
+                    isSelected
+                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                      : "border-surface-container hover:border-primary/45 hover:bg-surface-container-lowest"
+                  )}
                 >
                   <span className="text-[13px] font-semibold text-on-surface">{day}</span>
                   <div className="flex flex-wrap gap-1 mt-1">
@@ -405,63 +420,76 @@ export default function CalendarPage() {
         <div className="lg:col-span-4 space-y-6">
           {/* Day List */}
           <div className="bg-white border border-outline-variant/30 rounded-xl p-6 shadow-sm">
-            <h3 className="font-display text-lg font-semibold text-on-surface mb-4">
-              Eventos Agendados
-            </h3>
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-surface-container">
+              <h3 className="font-display text-base font-bold text-on-surface">
+                Agenda: {activeDateStr.split('-').reverse().join('/')}
+              </h3>
+              <button
+                onClick={() => {
+                  setSelectedDate(activeDateStr);
+                  setShowAddForm(true);
+                }}
+                className="text-[12px] text-primary font-bold hover:underline flex items-center gap-1"
+              >
+                <Plus size={14} /> Agendar
+              </button>
+            </div>
 
             {loading ? (
               <div className="py-10 flex justify-center">
                 <Loader2 size={24} className="text-primary animate-spin" />
               </div>
-            ) : events.length === 0 ? (
+            ) : events.filter((e) => e.dateStr === activeDateStr).length === 0 ? (
               <div className="text-center py-12 text-on-surface-variant">
                 <CalendarIcon size={32} className="mx-auto text-outline mb-2" />
-                <p className="text-sm font-semibold">Nenhum evento agendado</p>
-                <p className="text-xs mt-1">Toque numa data para adicionar.</p>
+                <p className="text-sm font-semibold">Nenhum evento para este dia</p>
+                <p className="text-xs mt-1">Clique em "Agendar" acima para adicionar.</p>
               </div>
             ) : (
               <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
-                {events.map((e, idx) => (
-                  <div
-                    key={e.id || idx}
-                    className="p-3 border rounded-xl flex items-start justify-between gap-3 hover:bg-surface-container-low transition-colors"
-                  >
-                    <div className="flex gap-3">
-                      <div
-                        className={cn(
-                          'w-2.5 h-2.5 rounded-full mt-1.5 shrink-0',
-                          e.type === 'workout'
-                            ? 'bg-primary-container'
-                            : e.type === 'meal'
-                            ? 'bg-alert-gold'
-                            : e.type === 'assessment'
-                            ? 'bg-medical-green'
-                            : 'bg-outline'
-                        )}
-                      />
-                      <div>
-                        <p className="font-semibold text-on-surface text-[14px]">
-                          {e.title}
-                        </p>
-                        <p className="text-on-surface-variant text-xs flex items-center gap-1 mt-1">
-                          <Clock size={12} /> {e.dateStr.split('-').reverse().join('/')} às {e.timeStr}
-                        </p>
-                        {e.description && (
-                          <p className="text-on-surface-variant text-[11px] mt-1.5 leading-4">
-                            {e.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteEvent(e.id, idx)}
-                      className="text-outline hover:text-error transition-colors p-1"
-                      title="Apagar Evento"
+                {events
+                  .filter((e) => e.dateStr === activeDateStr)
+                  .map((e, idx) => (
+                    <div
+                      key={e.id || idx}
+                      className="p-3 border rounded-xl flex items-start justify-between gap-3 hover:bg-surface-container-low transition-colors"
                     >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex gap-3">
+                        <div
+                          className={cn(
+                            'w-2.5 h-2.5 rounded-full mt-1.5 shrink-0',
+                            e.type === 'workout'
+                              ? 'bg-primary-container'
+                              : e.type === 'meal'
+                              ? 'bg-alert-gold'
+                              : e.type === 'assessment'
+                              ? 'bg-medical-green'
+                              : 'bg-outline'
+                          )}
+                        />
+                        <div>
+                          <p className="font-semibold text-on-surface text-[14px]">
+                            {e.title}
+                          </p>
+                          <p className="text-on-surface-variant text-xs flex items-center gap-1 mt-1">
+                            <Clock size={12} /> às {e.timeStr}
+                          </p>
+                          {e.description && (
+                            <p className="text-on-surface-variant text-[11px] mt-1.5 leading-4 whitespace-pre-line">
+                              {e.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteEvent(e.id, events.indexOf(e))}
+                        className="text-outline hover:text-error transition-colors p-1"
+                        title="Apagar Evento"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
               </div>
             )}
           </div>
