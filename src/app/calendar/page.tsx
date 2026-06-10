@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Calendar as CalendarIcon, Clock, Plus, Trash2, Sparkles, Loader2, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Plus, Trash2, Sparkles, Loader2, ChevronLeft, ChevronRight, Check, X, BookOpen, Utensils } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { CoachInsight } from '@/components/dashboard/CoachInsight';
 import { cn, calculateBMR, calculateTDEE, calculateMacros } from '@/lib/utils';
+import { mockMeals } from '@/lib/mock-data';
+import type { Meal } from '@/lib/types';
 
 interface CalendarEvent {
   id?: string;
@@ -20,6 +22,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loggedMeals, setLoggedMeals] = useState<Meal[]>([]);
 
   // Active selected cell date in calendar (defaults to today)
   const getTodayStr = () => {
@@ -29,6 +32,101 @@ export default function CalendarPage() {
     return `${d.getFullYear()}-${mm}-${dd}`;
   };
   const [activeDateStr, setActiveDateStr] = useState<string>(getTodayStr());
+
+  // Recipe Book based on user profile
+  const recipes = [
+    {
+      title: 'Papas de Aveia com Whey e Mirtilos',
+      category: 'Pequeno-almoço',
+      time: '10 min',
+      calories: 340,
+      protein: 26,
+      carbs: 45,
+      fat: 5,
+      ingredients: '50g aveia integral, 1 scoop whey, 50g mirtilos, 150ml água/bebida vegetal',
+      prep: 'Cozinhar a aveia na água, retirar do lume, juntar whey e decorar com mirtilos.',
+      tags: ['lactose-free']
+    },
+    {
+      title: 'Salmão Grelhado com Batata Doce',
+      category: 'Almoço / Jantar',
+      time: '25 min',
+      calories: 520,
+      protein: 38,
+      carbs: 40,
+      fat: 20,
+      ingredients: '150g salmão, 150g batata doce cozida, 100g brócolos, 1 colher azeite',
+      prep: 'Grelhar o salmão e a batata doce às rodelas. Cozer brócolos ao vapor e regar com azeite.',
+      tags: ['lactose-free', 'gluten-free']
+    },
+    {
+      title: 'Tofu Salteado com Quinoa e Courgette',
+      category: 'Almoço / Jantar',
+      time: '20 min',
+      calories: 410,
+      protein: 20,
+      carbs: 48,
+      fat: 14,
+      ingredients: '150g tofu, 120g quinoa cozida, 100g courgette, alho e especiarias',
+      prep: 'Saltear o tofu aos cubos e a courgette com alho. Misturar com a quinoa quente.',
+      tags: ['vegan', 'lactose-free', 'gluten-free']
+    },
+    {
+      title: 'Crepioca de Peru e Requeijão Ligeiro',
+      category: 'Snack / Lanche',
+      time: '8 min',
+      calories: 290,
+      protein: 18,
+      carbs: 28,
+      fat: 10,
+      ingredients: '1 ovo, 2 colheres goma tapioca, 2 fatias peito peru, 30g requeijão',
+      prep: 'Bater o ovo com a tapioca. Colocar na frigideira, dourar os dois lados, rechear e dobrar.',
+      tags: ['gluten-free']
+    }
+  ];
+
+  const filteredRecipes = recipes.filter((recipe) => {
+    if (!profile?.restrictions || profile.restrictions.length === 0) return true;
+    return profile.restrictions.every((r) => {
+      const rule = r.toLowerCase();
+      if (rule.includes('lactose')) return recipe.tags.includes('lactose-free');
+      if (rule.includes('glúten') || rule.includes('gluten')) return recipe.tags.includes('gluten-free');
+      if (rule.includes('vegan')) return recipe.tags.includes('vegan');
+      return true;
+    });
+  });
+
+  const handleScheduleRecipe = async (recipe: typeof recipes[0]) => {
+    setSavingEvent(true);
+    const newEvent: CalendarEvent = {
+      title: `🥗 Receita: ${recipe.title}`,
+      type: 'meal',
+      dateStr: activeDateStr,
+      timeStr: recipe.category === 'Pequeno-almoço' ? '08:30' : recipe.category === 'Snack / Lanche' ? '17:00' : '13:30',
+      description: `Ingredientes: ${recipe.ingredients}\nMacros: ${recipe.calories} kcal, ${recipe.protein}g Prot, ${recipe.carbs}g H.C., ${recipe.fat}g Gord.\nPrep: ${recipe.prep}`,
+    };
+
+    if (isDemo || !firebaseUser) {
+      const updated = [...events, newEvent];
+      setEvents(updated);
+      localStorage.setItem('demo_events', JSON.stringify(updated));
+    } else {
+      try {
+        const { getFirebaseDb } = await import('@/lib/firebase');
+        const { collection, addDoc } = await import('firebase/firestore');
+        const db = getFirebaseDb();
+        await addDoc(collection(db, 'events'), {
+          ...newEvent,
+          userId: firebaseUser.uid,
+          createdAt: new Date(),
+        });
+        await fetchEvents();
+      } catch (err) {
+        console.error('Erro ao salvar receita no calendário:', err);
+      }
+    }
+    setSavingEvent(false);
+  };
 
   // New Event Form State
   const [showAddForm, setShowAddForm] = useState(false);
@@ -113,9 +211,48 @@ export default function CalendarPage() {
     }
   }, [firebaseUser, isDemo, year, month]);
 
+  const fetchLoggedMeals = useCallback(async () => {
+    if (isDemo || !firebaseUser) {
+      setLoggedMeals(mockMeals);
+      return;
+    }
+    try {
+      const { getFirebaseDb } = await import('@/lib/firebase');
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const db = getFirebaseDb();
+      const q = query(
+        collection(db, 'meals'),
+        where('userId', '==', firebaseUser.uid)
+      );
+      const querySnapshot = await getDocs(q);
+      const loaded: Meal[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        loaded.push({
+          id: doc.id,
+          userId: data.userId,
+          imageUrl: data.imageUrl || '',
+          foods: data.foods || [],
+          calories: data.calories || 0,
+          protein: data.protein || 0,
+          carbs: data.carbs || 0,
+          fat: data.fat || 0,
+          feedback: data.feedback || '',
+          date: data.date?.toDate() || new Date(),
+          confirmed: data.confirmed || false,
+          mealType: data.mealType || 'lunch',
+        });
+      });
+      setLoggedMeals(loaded.length > 0 ? loaded : mockMeals);
+    } catch (err) {
+      console.error('Erro ao carregar refeições do diário:', err);
+    }
+  }, [firebaseUser, isDemo]);
+
   useEffect(() => {
     fetchEvents();
-  }, [fetchEvents]);
+    fetchLoggedMeals();
+  }, [fetchEvents, fetchLoggedMeals]);
 
   // 2. Add Event
   const handleAddEvent = async (e: React.FormEvent) => {
@@ -557,6 +694,48 @@ export default function CalendarPage() {
               </div>
             )}
           </div>
+
+          {/* Recipe Book Section */}
+          <div className="bg-white border border-outline-variant/30 rounded-xl p-6 shadow-sm space-y-4">
+            <h3 className="font-display text-base font-bold text-on-surface flex items-center gap-2">
+              <BookOpen size={18} className="text-primary" />
+              Livro de Receitas IA
+            </h3>
+            <p className="text-on-surface-variant text-xs">
+              Receitas saudáveis e práticas recomendadas especificamente para o seu perfil.
+            </p>
+
+            <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+              {filteredRecipes.map((recipe, idx) => (
+                <div key={idx} className="p-3 border rounded-xl space-y-2 hover:bg-surface-container-low transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-on-surface text-xs leading-5">
+                        {recipe.title}
+                      </p>
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mt-0.5">
+                        {recipe.category} • {recipe.time}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                    <strong>Ingredientes:</strong> {recipe.ingredients.slice(0, 70)}...
+                  </p>
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-[10px] bg-primary/5 text-primary px-2 py-0.5 rounded font-semibold">
+                      {recipe.calories} kcal
+                    </span>
+                    <button
+                      onClick={() => handleScheduleRecipe(recipe)}
+                      className="text-[11px] text-primary font-bold hover:underline flex items-center gap-1"
+                    >
+                      <Plus size={12} /> Agendar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -572,6 +751,33 @@ export default function CalendarPage() {
             </div>
 
             <form onSubmit={handleAddEvent} className="space-y-4">
+              {type === 'meal' && loggedMeals.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase">Importar Refeição do Diário</label>
+                  <select
+                    onChange={(e) => {
+                      const mealId = e.target.value;
+                      if (!mealId) return;
+                      const selected = loggedMeals.find((m) => m.id === mealId || m.imageUrl === mealId);
+                      if (selected) {
+                        const mealTypeLabel = selected.mealType === 'breakfast' ? 'Pequeno-almoço' : selected.mealType === 'lunch' ? 'Almoço' : selected.mealType === 'dinner' ? 'Jantar' : 'Snack';
+                        const emoji = selected.mealType === 'breakfast' ? '🌅' : selected.mealType === 'lunch' ? '🍽️' : selected.mealType === 'dinner' ? '🌙' : '🍎';
+                        setTitle(`${emoji} ${mealTypeLabel} (${selected.calories} kcal)`);
+                        setDescription(`Alimentos: ${selected.foods.map(f => `${f.name} (${f.quantity})`).join(', ')}.\nProteína: ${selected.protein}g, Hidratos: ${selected.carbs}g, Gordura: ${selected.fat}g.`);
+                      }
+                    }}
+                    className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">-- Escolher refeição registada --</option>
+                    {loggedMeals.map((m, idx) => (
+                      <option key={m.id || idx} value={m.id || m.imageUrl}>
+                        {m.mealType === 'breakfast' ? '🌅' : m.mealType === 'lunch' ? '🍽️' : m.mealType === 'dinner' ? '🌙' : '🍎'} {m.mealType.toUpperCase()} - {m.foods.map(f => f.name).slice(0, 2).join(', ')} ({m.calories} kcal)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="text-xs font-bold text-on-surface-variant uppercase">Título</label>
                 <input
