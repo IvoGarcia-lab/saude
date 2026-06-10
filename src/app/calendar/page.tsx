@@ -11,7 +11,7 @@ import type { Meal } from '@/lib/types';
 interface CalendarEvent {
   id?: string;
   title: string;
-  type: 'workout' | 'meal' | 'assessment' | 'rest';
+  type: 'workout' | 'meal' | 'water' | 'assessment' | 'rest';
   dateStr: string; // YYYY-MM-DD
   timeStr: string; // HH:MM
   description?: string;
@@ -346,7 +346,7 @@ export default function CalendarPage() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [title, setTitle] = useState('');
-  const [type, setType] = useState<'workout' | 'meal' | 'assessment' | 'rest'>('workout');
+  const [type, setType] = useState<'workout' | 'meal' | 'water' | 'assessment' | 'rest'>('workout');
   const [selectedDate, setSelectedDate] = useState('');
   const [time, setTime] = useState('08:00');
   const [description, setDescription] = useState('');
@@ -959,6 +959,34 @@ export default function CalendarPage() {
               const dayEvents = events.filter((e) => e.dateStr === dateStr);
               const isSelected = activeDateStr === dateStr;
 
+              // Calorie percentage calculation
+              let dayMealsKcal = 0;
+              dayEvents.filter(e => e.type === 'meal').forEach(m => {
+                const kcalMatch = m.title.match(/(\d+)\s*kcal/) || (m.description && m.description.match(/(\d+)\s*kcal/));
+                dayMealsKcal += kcalMatch ? parseInt(kcalMatch[1]) : 400;
+              });
+              const calPercent = Math.min(100, Math.round((dayMealsKcal / dailyCalorieTarget) * 100));
+
+              // Water consumption sum
+              let dayWaterMl = 0;
+              dayEvents.filter(e => e.type === 'water').forEach(w => {
+                const mlMatch = w.title.match(/(\d+)\s*(ml|l|L)/) || (w.description && w.description.match(/(\d+)\s*(ml|l|L)/));
+                if (mlMatch) {
+                  const num = parseFloat(mlMatch[1]);
+                  const unit = mlMatch[2].toLowerCase();
+                  if (unit === 'l') {
+                    dayWaterMl += num * 1000;
+                  } else {
+                    dayWaterMl += num;
+                  }
+                } else {
+                  dayWaterMl += 250; // default 250 ml
+                }
+              });
+
+              // Workouts filter
+              const dayWorkouts = dayEvents.filter(e => e.type === 'workout');
+
               return (
                 <div
                   key={`day-${day}`}
@@ -969,30 +997,39 @@ export default function CalendarPage() {
                     setShowAddForm(true);
                   }}
                   className={cn(
-                    "aspect-square border rounded-lg p-1.5 flex flex-col justify-between cursor-pointer transition-all",
+                    "min-h-[85px] aspect-square border rounded-lg p-1.5 flex flex-col justify-between cursor-pointer transition-all",
                     isSelected
                       ? "border-primary bg-primary/5 ring-1 ring-primary"
                       : "border-surface-container hover:border-primary/45 hover:bg-surface-container-lowest"
                   )}
                 >
-                  <span className="text-[13px] font-semibold text-on-surface">{day}</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {dayEvents.slice(0, 3).map((e, idx) => (
-                      <div
-                        key={idx}
-                        className={cn(
-                          'w-2 h-2 rounded-full',
-                          e.type === 'workout'
-                            ? 'bg-primary-container'
-                            : e.type === 'meal'
-                            ? 'bg-alert-gold'
-                            : e.type === 'assessment'
-                            ? 'bg-medical-green'
-                            : 'bg-outline'
-                        )}
-                        title={e.title}
-                      />
-                    ))}
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-[12px] font-bold text-on-surface">{day}</span>
+                    {calPercent > 0 && (
+                      <span className={cn(
+                        "text-[9px] px-1 py-0.25 rounded-full font-bold",
+                        calPercent >= 90 && calPercent <= 110 
+                          ? "bg-medical-green/10 text-medical-green" 
+                          : "bg-alert-gold/10 text-alert-gold"
+                      )}>
+                        {calPercent}%
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-col gap-0.5 mt-1 text-[9px] font-medium w-full">
+                    {dayWorkouts.length > 0 && (
+                      <div className="flex items-center gap-0.5 text-primary bg-primary/5 rounded px-1 py-0.5 truncate" title={dayWorkouts[0].title}>
+                        <span>🏋️</span>
+                        <span className="truncate">{dayWorkouts[0].title.replace(/🏋️\s*Proposto:\s*|🏋️\s*/, '')}</span>
+                      </div>
+                    )}
+                    {dayWaterMl > 0 && (
+                      <div className="flex items-center gap-0.5 text-blue-500 bg-blue-500/5 rounded px-1 py-0.5">
+                        <span>💧</span>
+                        <span>{(dayWaterMl / 1000).toFixed(1)}L</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -1047,6 +1084,8 @@ export default function CalendarPage() {
                               ? 'bg-primary-container'
                               : e.type === 'meal'
                               ? 'bg-alert-gold'
+                              : e.type === 'water'
+                              ? 'bg-blue-500'
                               : e.type === 'assessment'
                               ? 'bg-medical-green'
                               : 'bg-outline'
@@ -1084,7 +1123,7 @@ export default function CalendarPage() {
       {/* ---- Add Event Dialog Modal ---- */}
       {showAddForm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={cn("bg-white border rounded-2xl w-full p-6 shadow-2xl space-y-4 page-enter transition-all duration-300", type === 'meal' ? 'max-w-4xl' : 'max-w-md')}>
+          <div className={cn("bg-white border rounded-2xl w-full p-6 shadow-2xl space-y-4 page-enter transition-all duration-300", (type === 'meal' || type === 'water') ? 'max-w-4xl' : 'max-w-md')}>
             <div className="flex justify-between items-center pb-2 border-b w-full">
               <h3 className="font-display text-lg font-bold text-primary">Agendar Novo Evento</h3>
               <button onClick={() => setShowAddForm(false)} className="text-outline hover:text-on-surface p-1">
@@ -1092,9 +1131,9 @@ export default function CalendarPage() {
               </button>
             </div>
 
-            <div className={cn("grid gap-6", type === 'meal' ? 'grid-cols-1 md:grid-cols-12' : 'grid-cols-1')}>
+            <div className={cn("grid gap-6", (type === 'meal' || type === 'water') ? 'grid-cols-1 md:grid-cols-12' : 'grid-cols-1')}>
               {/* Form Column */}
-              <form onSubmit={handleAddEvent} className={cn("space-y-4", type === 'meal' ? 'md:col-span-5' : 'w-full')}>
+              <form onSubmit={handleAddEvent} className={cn("space-y-4", (type === 'meal' || type === 'water') ? 'md:col-span-5' : 'w-full')}>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-on-surface-variant uppercase">Tipo</label>
@@ -1105,6 +1144,7 @@ export default function CalendarPage() {
                     >
                       <option value="workout">🏋️ Treino</option>
                       <option value="meal">🥗 Alimentação</option>
+                      <option value="water">💧 Água</option>
                       <option value="assessment">📏 Avaliação</option>
                       <option value="rest">🛌 Descanso</option>
                     </select>
@@ -1151,7 +1191,7 @@ export default function CalendarPage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Instruções ou ingredientes..."
-                    rows={type === 'meal' ? 4 : 2}
+                    rows={(type === 'meal' || type === 'water') ? 4 : 2}
                     className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary resize-none"
                   />
                 </div>
@@ -1165,113 +1205,146 @@ export default function CalendarPage() {
                 </button>
               </form>
 
-              {/* Selector Column (Only for Meal type) */}
-              {type === 'meal' && (
+              {/* Selector Column (Meal or Water types) */}
+              {(type === 'meal' || type === 'water') && (
                 <div className="md:col-span-7 flex flex-col h-[420px] border-t md:border-t-0 md:border-l border-outline-variant/30 md:pl-6 pt-4 md:pt-0">
-                  {/* Selector Tabs */}
-                  <div className="flex border-b border-surface-container pb-2 mb-3">
-                    <button
-                      type="button"
-                      onClick={() => setMealTab('recipes')}
-                      className={cn(
-                        "flex-1 pb-2 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-all",
-                        mealTab === 'recipes' ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-on-surface"
-                      )}
-                    >
-                      📖 Livro de Receitas ({filteredRecipes.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMealTab('gallery')}
-                      className={cn(
-                        "flex-1 pb-2 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-all",
-                        mealTab === 'gallery' ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-on-surface"
-                      )}
-                    >
-                      📸 Galeria de Fotos ({loggedMeals.length})
-                    </button>
-                  </div>
-
-                  {mealTab === 'recipes' && (
-                    <div className="flex flex-col flex-1 min-h-0 space-y-3">
-                      {/* Search Recipes */}
-                      <input
-                        type="text"
-                        placeholder="Pesquisar receita..."
-                        value={recipeSearch}
-                        onChange={(e) => setRecipeSearch(e.target.value)}
-                        className="bg-surface-container-low border-none rounded-xl p-2.5 text-xs text-on-surface outline-none focus:ring-1 focus:ring-primary w-full"
-                      />
-
-                      {/* Recipe List */}
-                      <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                        {filteredRecipes
-                          .filter(r => r.title.toLowerCase().includes(recipeSearch.toLowerCase()))
-                          .map((recipe, idx) => {
-                            const scaled = getScaledRecipe(recipe);
-                            return (
-                              <div
-                                key={idx}
-                                className="p-3 border border-outline-variant/20 rounded-xl space-y-1 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer"
-                                onClick={() => {
-                                  setTitle(`🥗 Receita: ${scaled.title}`);
-                                  setDescription(`Ingredientes: ${scaled.ingredients}\nMacros: ${scaled.calories} kcal, P: ${scaled.protein}g, C: ${scaled.carbs}g, G: ${scaled.fat}g\nPreparo: ${scaled.prep}`);
-                                }}
-                              >
-                                <div className="flex justify-between items-start">
-                                  <p className="font-semibold text-on-surface text-xs leading-5">{scaled.title}</p>
-                                  <span className="text-[10px] bg-primary/5 text-primary px-1.5 py-0.5 rounded font-bold shrink-0">{scaled.calories} kcal</span>
-                                </div>
-                                <p className="text-[10px] text-on-surface-variant font-medium">{scaled.category} • Prep: {scaled.time}</p>
-                              </div>
-                            );
-                          })}
+                  {type === 'meal' && (
+                    <>
+                      {/* Selector Tabs */}
+                      <div className="flex border-b border-surface-container pb-2 mb-3">
+                        <button
+                          type="button"
+                          onClick={() => setMealTab('recipes')}
+                          className={cn(
+                            "flex-1 pb-2 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-all",
+                            mealTab === 'recipes' ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-on-surface"
+                          )}
+                        >
+                          📖 Livro de Receitas ({filteredRecipes.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMealTab('gallery')}
+                          className={cn(
+                            "flex-1 pb-2 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-all",
+                            mealTab === 'gallery' ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-on-surface"
+                          )}
+                        >
+                          📸 Galeria de Fotos ({loggedMeals.length})
+                        </button>
                       </div>
-                    </div>
+
+                      {mealTab === 'recipes' && (
+                        <div className="flex flex-col flex-1 min-h-0 space-y-3">
+                          {/* Search Recipes */}
+                          <input
+                            type="text"
+                            placeholder="Pesquisar receita..."
+                            value={recipeSearch}
+                            onChange={(e) => setRecipeSearch(e.target.value)}
+                            className="bg-surface-container-low border-none rounded-xl p-2.5 text-xs text-on-surface outline-none focus:ring-1 focus:ring-primary w-full"
+                          />
+
+                          {/* Recipe List */}
+                          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                            {filteredRecipes
+                              .filter(r => r.title.toLowerCase().includes(recipeSearch.toLowerCase()))
+                              .map((recipe, idx) => {
+                                const scaled = getScaledRecipe(recipe);
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="p-3 border border-outline-variant/20 rounded-xl space-y-1 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer"
+                                    onClick={() => {
+                                      setTitle(`🥗 Receita: ${scaled.title}`);
+                                      setDescription(`Ingredientes: ${scaled.ingredients}\nMacros: ${scaled.calories} kcal, P: ${scaled.protein}g, C: ${scaled.carbs}g, G: ${scaled.fat}g\nPreparo: ${scaled.prep}`);
+                                    }}
+                                  >
+                                    <div className="flex justify-between items-start">
+                                      <p className="font-semibold text-on-surface text-xs leading-5">{scaled.title}</p>
+                                      <span className="text-[10px] bg-primary/5 text-primary px-1.5 py-0.5 rounded font-bold shrink-0">{scaled.calories} kcal</span>
+                                    </div>
+                                    <p className="text-[10px] text-on-surface-variant font-medium">{scaled.category} • Prep: {scaled.time}</p>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {mealTab === 'gallery' && (
+                        <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+                          {loggedMeals.length === 0 ? (
+                            <div className="text-center py-12 text-on-surface-variant text-xs">
+                              Nenhuma refeição encontrada na sua galeria do diário.
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-3">
+                              {loggedMeals.map((meal, idx) => {
+                                const scaled = getScaledGalleryMeal(meal);
+                                return (
+                                  <div
+                                    key={meal.id || idx}
+                                    className="border border-outline-variant/20 rounded-xl p-2 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer flex flex-col gap-2"
+                                    onClick={() => {
+                                      const mealTypeLabel = meal.mealType === 'breakfast' ? 'Pequeno-almoço' : meal.mealType === 'lunch' ? 'Almoço' : meal.mealType === 'dinner' ? 'Jantar' : 'Snack';
+                                      setTitle(`🍽️ Galeria: ${mealTypeLabel} (${scaled.calories} kcal)`);
+                                      setDescription(`Alimentos: ${scaled.foods.map((f: any) => `${f.name} (${f.quantity})`).join(', ')}.\nProteína: ${scaled.protein}g, Hidratos: ${scaled.carbs}g, Gordura: ${scaled.fat}g.`);
+                                    }}
+                                  >
+                                    {meal.imageUrl ? (
+                                      <img
+                                        src={meal.imageUrl}
+                                        alt="Refeição"
+                                        className="w-full h-24 object-cover rounded-lg"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-24 bg-surface-container-low flex items-center justify-center rounded-lg text-on-surface-variant">
+                                        <Utensils size={24} />
+                                      </div>
+                                    )}
+                                    <div>
+                                      <p className="font-bold text-[11px] text-on-surface capitalize leading-tight">
+                                        {meal.mealType === 'breakfast' ? '🌅 P. Almoço' : meal.mealType === 'lunch' ? '🍽️ Almoço' : meal.mealType === 'dinner' ? '🌙 Jantar' : '🍎 Snack'}
+                                      </p>
+                                      <p className="text-[10px] text-primary font-bold mt-0.5">{scaled.calories} kcal</p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
 
-                  {mealTab === 'gallery' && (
-                    <div className="flex-1 overflow-y-auto min-h-0 pr-1">
-                      {loggedMeals.length === 0 ? (
-                        <div className="text-center py-12 text-on-surface-variant text-xs">
-                          Nenhuma refeição encontrada na sua galeria do diário.
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-3">
-                          {loggedMeals.map((meal, idx) => {
-                            const scaled = getScaledGalleryMeal(meal);
-                            return (
-                              <div
-                                key={meal.id || idx}
-                                className="border border-outline-variant/20 rounded-xl p-2 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer flex flex-col gap-2"
-                                onClick={() => {
-                                  const mealTypeLabel = meal.mealType === 'breakfast' ? 'Pequeno-almoço' : meal.mealType === 'lunch' ? 'Almoço' : meal.mealType === 'dinner' ? 'Jantar' : 'Snack';
-                                  setTitle(`🍽️ Galeria: ${mealTypeLabel} (${scaled.calories} kcal)`);
-                                  setDescription(`Alimentos: ${scaled.foods.map((f: any) => `${f.name} (${f.quantity})`).join(', ')}.\nProteína: ${scaled.protein}g, Hidratos: ${scaled.carbs}g, Gordura: ${scaled.fat}g.`);
-                                }}
-                              >
-                                {meal.imageUrl ? (
-                                  <img
-                                    src={meal.imageUrl}
-                                    alt="Refeição"
-                                    className="w-full h-24 object-cover rounded-lg"
-                                  />
-                                ) : (
-                                  <div className="w-full h-24 bg-surface-container-low flex items-center justify-center rounded-lg text-on-surface-variant">
-                                    <Utensils size={24} />
-                                  </div>
-                                )}
-                                <div>
-                                  <p className="font-bold text-[11px] text-on-surface capitalize leading-tight">
-                                    {meal.mealType === 'breakfast' ? '🌅 P. Almoço' : meal.mealType === 'lunch' ? '🍽️ Almoço' : meal.mealType === 'dinner' ? '🌙 Jantar' : '🍎 Snack'}
-                                  </p>
-                                  <p className="text-[10px] text-primary font-bold mt-0.5">{scaled.calories} kcal</p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                  {type === 'water' && (
+                    <div className="flex flex-col flex-1 min-h-0 space-y-3">
+                      <h4 className="font-display text-sm font-bold text-primary mb-1">Registos Rápidos de Água</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { title: 'Copo de Água', amount: '250 ml', icon: '🥛' },
+                          { title: 'Garrafa Pequena', amount: '500 ml', icon: '🧴' },
+                          { title: 'Garrafa Média', amount: '750 ml', icon: '🥤' },
+                          { title: 'Garrafa Grande', amount: '1.5 L', icon: '🍶' },
+                        ].map((preset, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3 border border-outline-variant/20 rounded-xl flex items-center gap-3 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer"
+                            onClick={() => {
+                              setTitle(`💧 Água: ${preset.amount}`);
+                              setDescription(`Consumo de água registado: ${preset.amount}.`);
+                            }}
+                          >
+                            <span className="text-2xl">{preset.icon}</span>
+                            <div>
+                              <p className="font-bold text-xs text-on-surface">{preset.title}</p>
+                              <p className="text-[10px] text-primary font-bold">{preset.amount}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
