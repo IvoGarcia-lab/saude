@@ -5,10 +5,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { image, text } = body;
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.OPENROUTER_API_KEY;
 
-    if (!apiKey) {
-      // Simulate Gemini analysis with slight variation for realistic demo mode
+    if (!apiKey || apiKey === 'YOUR_OPENROUTER_API_KEY') {
+      // Simulate OpenRouter analysis with realistic demo mode
       await new Promise((r) => setTimeout(r, 1500));
       const mockResult = {
         foods: [
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, data: mockResult });
     }
 
-    // Call real Gemini API
+    // Call OpenRouter API with Llama 3.2 Vision Free
     let prompt = `Analyze this meal. Provide a structured JSON response containing:
     {
       "foods": [{"name": "Food Item Name", "quantity": "Estimated Quantity"}],
@@ -38,52 +38,50 @@ export async function POST(request: Request) {
     }
     Respond ONLY with the raw JSON object. Do not include markdown code block formatting (like \`\`\`json) or any extra conversational text.`;
 
-    let contents: any[] = [];
+    const contentArray: any[] = [{ type: 'text', text: text ? `${prompt}\nContext: ${text}` : prompt }];
+
     if (image) {
-      // Extract base64 data and mime type
-      const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (match) {
-        const mimeType = match[1];
-        const base64Data = match[2];
-        contents.push({
-          inlineData: {
-            mimeType,
-            data: base64Data
-          }
-        });
-      }
+      contentArray.push({
+        type: 'image_url',
+        image_url: {
+          url: image
+        }
+      });
     }
 
-    contents.push({
-      text: text ? `${prompt}\nAdditional user context/description: ${text}` : prompt
-    });
-
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      'https://openrouter.ai/api/v1/chat/completions',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': 'http://localhost:3000',
+          'X-Title': 'O Meu Coach Inteligente',
         },
         body: JSON.stringify({
-          contents: [{ parts: contents }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-          }
+          model: 'meta-llama/llama-3.2-11b-vision-instruct:free',
+          messages: [
+            {
+              role: 'user',
+              content: contentArray
+            }
+          ],
+          response_format: { type: 'json_object' }
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      return NextResponse.json({ error: `Gemini API error: ${errorText}` }, { status: response.status });
+      return NextResponse.json({ error: `OpenRouter API error: ${errorText}` }, { status: response.status });
     }
 
     const resData = await response.json();
-    const textResponse = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textResponse = resData.choices?.[0]?.message?.content;
     
     if (!textResponse) {
-      throw new Error('Empty response from Gemini');
+      throw new Error('Empty response from OpenRouter');
     }
 
     const parsedData = JSON.parse(textResponse.trim());
