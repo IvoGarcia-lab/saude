@@ -115,6 +115,7 @@ export default function DiaryPage() {
       reader.onloadend = async () => {
         try {
           const base64data = reader.result as string;
+          setSavedImageUrl((prev) => (!prev || prev.startsWith('blob:') ? base64data : prev));
           const res = await fetch('/api/analyze-meal', {
             method: 'POST',
             headers: {
@@ -469,7 +470,7 @@ export default function DiaryPage() {
                   className="bg-white border border-outline-variant/30 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-primary/40 hover:bg-surface-container-lowest transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    {meal.imageUrl && !meal.imageUrl.startsWith('blob:') ? (
+                    {meal.imageUrl ? (
                       <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border">
                         <img src={meal.imageUrl} alt="Refeição" className="w-full h-full object-cover" />
                       </div>
@@ -551,7 +552,7 @@ export default function DiaryPage() {
               </div>
             </div>
 
-            {selectedMeal.imageUrl && !selectedMeal.imageUrl.startsWith('blob:') ? (
+            {selectedMeal.imageUrl ? (
               <div className="rounded-xl overflow-hidden aspect-video w-full border">
                 <img src={selectedMeal.imageUrl} alt="Refeição" className="w-full h-full object-cover" />
               </div>
