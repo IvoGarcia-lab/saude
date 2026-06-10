@@ -233,7 +233,7 @@ export default function CalendarPage() {
       });
       const workoutData = await workoutRes.json();
 
-      const todayStr = new Date().toISOString().split('T')[0];
+      const targetDateStr = activeDateStr;
       const newEvents: CalendarEvent[] = [];
 
       if (mealsData.success && mealsData.data?.meals) {
@@ -243,7 +243,7 @@ export default function CalendarPage() {
           newEvents.push({
             title: `${mealTypeEmoji} Proposto: ${meal.title} (${meal.totalCalories} kcal)`,
             type: 'meal',
-            dateStr: todayStr,
+            dateStr: targetDateStr,
             timeStr: time,
             description: `Alimentos: ${meal.items.map((i: any) => `${i.name} (${i.quantity})`).join(', ')}.\nPrep: ${meal.instructions}`,
           });
@@ -254,7 +254,7 @@ export default function CalendarPage() {
         newEvents.push({
           title: `🏋️ Proposto: Treino ${workoutData.data.workout.name || 'Personalizado'}`,
           type: 'workout',
-          dateStr: todayStr,
+          dateStr: targetDateStr,
           timeStr: '18:30',
           description: `Exercícios:\n${workoutData.data.workout.exercises.map((e: any) => `- ${e.name}: ${e.sets} séries x ${e.reps} (${e.rest} rest)`).join('\n')}`,
         });
