@@ -1,12 +1,67 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Play, Clock, Flame, Zap, Lightbulb, Search, Sparkles } from 'lucide-react';
+import { Play, Clock, Flame, Zap, Lightbulb, Search, Sparkles, Loader2 } from 'lucide-react';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { mockWorkout } from '@/lib/mock-data';
+import type { Workout } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export default function WorkoutsPage() {
-  const workout = mockWorkout;
+  const { profile } = useAuth();
+  const [workout, setWorkout] = useState<Workout | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWorkout = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/generate-workout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            goal: profile?.goal || 'maintain',
+            restrictions: profile?.restrictions || [],
+            weight: profile?.weight || 70,
+            height: profile?.height || 170,
+          }),
+        });
+        const data = await res.json();
+        if (data.success && data.data) {
+          setWorkout(data.data);
+        } else {
+          throw new Error('Erro na API');
+        }
+      } catch (err) {
+        console.error(err);
+        // Fallback to mock data if it fails
+        setWorkout(mockWorkout);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWorkout();
+  }, [profile?.goal, profile?.restrictions, profile?.weight, profile?.height]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 page-enter">
+        <Loader2 size={40} className="text-primary animate-spin" />
+        <p className="font-display text-lg font-semibold text-primary">
+          A gerar o seu plano de treino personalizado...
+        </p>
+        <p className="text-on-surface-variant text-sm">
+          A IA está a calibrar os exercícios com base nos seus objetivos
+        </p>
+      </div>
+    );
+  }
+
+  if (!workout) return null;
 
   return (
     <div className="px-4 md:px-10 max-w-[1280px] mx-auto py-8 page-enter">
