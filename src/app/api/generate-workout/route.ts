@@ -1,72 +1,79 @@
 import { NextResponse } from 'next/server';
 
+function getFallbackWorkout(goal: string, restrictions: string[], weight: number) {
+  return {
+    title: goal === 'lose' ? 'Cardio & Definição Inteligente' : 'Hipertrofia Funcional Acelerada',
+    description: `Treino desenhado para otimizar os seus resultados considerando um objetivo de ${
+      goal === 'lose' ? 'perda de gordura' : goal === 'gain' ? 'ganho muscular' : 'manutenção'
+    } com peso de ${weight || 74}kg.`,
+    suggestedLocation: 'Ginásio Local ou Ao Ar Livre',
+    aiRationale: `Com base nas restrições ${
+      restrictions && restrictions.length > 0 ? restrictions.join(', ') : 'nenhuma'
+    }, estruturámos exercícios de baixo impacto articular, focando na ativação muscular máxima.`,
+    duration: 45,
+    caloriesEst: goal === 'lose' ? 380 : 310,
+    intensity: 'moderate',
+    exercises: [
+      {
+        name: 'Agachamento Goblet',
+        sets: 3,
+        reps: '12-15 reps',
+        instruction: 'Mantenha o peito elevado e desça até os quadris passarem a linha dos joelhos.',
+        muscleGroups: ['Quadríceps', 'Glúteos'],
+        completed: false
+      },
+      {
+        name: 'Flexões de Braço (Modificadas se necessário)',
+        sets: 3,
+        reps: '10-12 reps',
+        instruction: 'Corpo alinhado, cotovelos a 45 graus em relação ao tronco.',
+        muscleGroups: ['Peito', 'Tríceps'],
+        completed: false
+      },
+      {
+        name: 'Puxada Dorsal com Elástico',
+        sets: 3,
+        reps: '15 reps',
+        instruction: 'Foque na contração das escápulas no ponto máximo da puxada.',
+        muscleGroups: ['Costas', 'Bíceps'],
+        completed: false
+      },
+      {
+        name: 'Prancha Abdominal Estática',
+        sets: 3,
+        reps: '45 seg',
+        instruction: 'Contraia o core e glúteos, mantendo a coluna numa linha neutra.',
+        muscleGroups: ['Core'],
+        completed: false
+      }
+    ],
+    coachTip: 'Mantenha-se hidratado durante a sessão. Controle a respiração: expire no esforço máximo e inspire no retorno.'
+  };
+}
+
 export async function POST(request: Request) {
+  let goal = 'maintain';
+  let restrictions: string[] = [];
+  let weight = 70;
+
   try {
     const body = await request.json();
-    const { goal, restrictions, weight, height } = body;
+    goal = body.goal || 'maintain';
+    restrictions = body.restrictions || [];
+    weight = body.weight || 70;
 
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     if (!apiKey || apiKey === 'YOUR_OPENROUTER_API_KEY') {
-      // Simulate OpenRouter workout generation with realistic demo mode
-      await new Promise((r) => setTimeout(r, 1500));
-      const mockWorkout = {
-        title: goal === 'lose' ? 'Cardio & Definição Inteligente' : 'Hipertrofia Funcional Acelerada',
-        description: `Treino desenhado para otimizar os seus resultados considerando um objetivo de ${
-          goal === 'lose' ? 'perda de gordura' : goal === 'gain' ? 'ganho muscular' : 'manutenção'
-        } com peso de ${weight || 74}kg.`,
-        suggestedLocation: 'Ginásio Local ou Ao Ar Livre',
-        aiRationale: `Com base nas restrições ${
-          restrictions && restrictions.length > 0 ? restrictions.join(', ') : 'nenhuma'
-        }, estruturámos exercícios de baixo impacto articular, focando na ativação muscular máxima.`,
-        duration: 45,
-        caloriesEst: goal === 'lose' ? 380 : 310,
-        intensity: 'moderate',
-        exercises: [
-          {
-            name: 'Agachamento Goblet',
-            sets: 3,
-            reps: '12-15 reps',
-            instruction: 'Mantenha o peito elevado e desça até os quadris passarem a linha dos joelhos.',
-            muscleGroups: ['Quadríceps', 'Glúteos'],
-            completed: false
-          },
-          {
-            name: 'Flexões de Braço (Modificadas se necessário)',
-            sets: 3,
-            reps: '10-12 reps',
-            instruction: 'Corpo alinhado, cotovelos a 45 graus em relação ao tronco.',
-            muscleGroups: ['Peito', 'Tríceps'],
-            completed: false
-          },
-          {
-            name: 'Puxada Dorsal com Elástico',
-            sets: 3,
-            reps: '15 reps',
-            instruction: 'Foque na contração das escápulas no ponto máximo da puxada.',
-            muscleGroups: ['Costas', 'Bíceps'],
-            completed: false
-          },
-          {
-            name: 'Prancha Abdominal Estática',
-            sets: 3,
-            reps: '45 seg',
-            instruction: 'Contraia o core e glúteos, mantendo a coluna numa linha neutra.',
-            muscleGroups: ['Core'],
-            completed: false
-          }
-        ],
-        coachTip: 'Mantenha-se hidratado durante a sessão. Controle a respiração: expire no esforço máximo e inspire no retorno.'
-      };
-      return NextResponse.json({ success: true, data: mockWorkout });
+      await new Promise((r) => setTimeout(r, 1000));
+      return NextResponse.json({ success: true, data: getFallbackWorkout(goal, restrictions, weight) });
     }
 
     // Call OpenRouter API with Llama 3.3 70B Free
     let prompt = `Generate a customized workout. User profile details:
-    - Goal: ${goal || 'maintain'}
-    - Restrictions: ${restrictions ? restrictions.join(', ') : 'none'}
-    - Weight: ${weight || 'N/A'} kg
-    - Height: ${height || 'N/A'} cm
+    - Goal: ${goal}
+    - Restrictions: ${restrictions.length > 0 ? restrictions.join(', ') : 'none'}
+    - Weight: ${weight} kg
     
     Provide a structured JSON response containing:
     {
@@ -103,20 +110,15 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           model: 'meta-llama/llama-3.3-70b-instruct:free',
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
+          messages: [{ role: 'user', content: prompt }],
           response_format: { type: 'json_object' }
         }),
       }
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      return NextResponse.json({ error: `OpenRouter API error: ${errorText}` }, { status: response.status });
+      console.warn(`OpenRouter returned status ${response.status}. Falling back to default generator.`);
+      return NextResponse.json({ success: true, data: getFallbackWorkout(goal, restrictions, weight) });
     }
 
     const resData = await response.json();
@@ -130,7 +132,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, data: parsedData });
 
   } catch (error: any) {
-    console.error('Error in generate-workout:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    console.error('Error in generate-workout, using fallback:', error);
+    return NextResponse.json({ success: true, data: getFallbackWorkout(goal, restrictions, weight) });
   }
 }
