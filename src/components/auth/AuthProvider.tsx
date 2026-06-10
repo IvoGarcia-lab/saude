@@ -44,8 +44,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const auth = getFirebaseAuth();
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      if (firebaseUser) {
+        try {
+          const { getFirebaseDb } = await import('@/lib/firebase');
+          const { doc, getDoc } = await import('firebase/firestore');
+          const db = getFirebaseDb();
+          const docSnap = await getDoc(doc(db, 'profiles', firebaseUser.uid));
+          if (docSnap.exists()) {
+            setProfile(docSnap.data() as UserProfile);
+          } else {
+            setProfile(null);
+          }
+        } catch (err) {
+          console.error('Erro ao carregar perfil do Firestore:', err);
+          setProfile(null);
+        }
+      } else {
+        setProfile(null);
+      }
       setLoading(false);
     });
 
