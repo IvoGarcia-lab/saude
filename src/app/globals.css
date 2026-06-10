@@ -1,26 +1,220 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ============================================
+   O MEU COACH INTELIGENTE — Design System
+   Migrated from DESIGN.md tokens
+   ============================================ */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* — Colors (Material Design 3 + Custom) — */
+  --color-primary: #004654;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #005f71;
+  --color-on-primary-container: #91d7eb;
+  --color-inverse-primary: #8bd1e5;
+  --color-primary-fixed: #afecff;
+  --color-primary-fixed-dim: #8bd1e5;
+  --color-on-primary-fixed: #001f26;
+  --color-on-primary-fixed-variant: #004e5d;
+
+  --color-secondary: #006970;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #9bedf5;
+  --color-on-secondary-container: #006e74;
+  --color-secondary-fixed: #9ef0f8;
+  --color-secondary-fixed-dim: #82d4db;
+  --color-on-secondary-fixed: #002022;
+  --color-on-secondary-fixed-variant: #004f54;
+
+  --color-tertiary: #5f3401;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #7b4b17;
+  --color-on-tertiary-container: #ffbf84;
+  --color-tertiary-fixed: #ffdcbf;
+  --color-tertiary-fixed-dim: #fbb97b;
+  --color-on-tertiary-fixed: #2d1600;
+  --color-on-tertiary-fixed-variant: #693c07;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-surface: #fbf9f8;
+  --color-on-surface: #1b1c1c;
+  --color-surface-dim: #dcd9d9;
+  --color-surface-bright: #fbf9f8;
+  --color-surface-variant: #e4e2e1;
+  --color-on-surface-variant: #3f484b;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0eded;
+  --color-surface-container-high: #eae8e7;
+  --color-surface-container-highest: #e4e2e1;
+  --color-surface-tint: #146779;
+  --color-inverse-surface: #303030;
+  --color-inverse-on-surface: #f3f0f0;
+  --color-outline: #6f797c;
+  --color-outline-variant: #bfc8cc;
+
+  /* Custom accents */
+  --color-medical-green: #28A745;
+  --color-alert-gold: #FFB100;
+  --color-surface-ice: #F8FAFB;
+  --color-ai-indigo: #4F46E5;
+
+  /* — Typography — */
+  --font-display: "Hanken Grotesk", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  /* — Spacing (8px base grid) — */
+  --spacing-base: 8px;
+  --spacing-stack-sm: 12px;
+  --spacing-stack-md: 24px;
+  --spacing-stack-lg: 48px;
+  --spacing-gutter: 24px;
+  --spacing-margin-mobile: 16px;
+  --spacing-margin-desktop: 40px;
+  --spacing-container-max: 1280px;
+
+  /* — Border Radius — */
+  --radius-sm: 0.25rem;
+  --radius-DEFAULT: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ============================================
+   Custom Utility Classes
+   ============================================ */
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-nav {
+  background: rgba(251, 249, 248, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.metric-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 95, 113, 0.08);
+}
+
+.metric-card:active {
+  transform: scale(0.98);
+}
+
+.ambient-shadow {
+  box-shadow: 0 8px 24px rgba(0, 95, 113, 0.08);
+}
+
+.ambient-shadow-lg {
+  box-shadow: 0 12px 40px rgba(0, 95, 113, 0.12);
+}
+
+/* AI Gradient for Coach Insight banners */
+.ai-gradient {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05), white);
+}
+
+/* Smooth page transitions */
+.page-enter {
+  animation: pageEnter 0.3s ease-out;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
+/* Step wizard transitions */
+.step-enter {
+  animation: stepIn 0.35s ease-out;
+}
+
+.step-exit {
+  animation: stepOut 0.25s ease-in forwards;
+}
+
+@keyframes stepIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes stepOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+/* Circular timer animation */
+@keyframes timerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.timer-pulse {
+  animation: timerPulse 2s ease-in-out infinite;
+}
+
+/* Upload dropzone */
+.dropzone-active {
+  border-color: var(--color-primary);
+  background: rgba(0, 70, 84, 0.03);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 9999px;
+}
+
+/* Body defaults */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface-ice);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+}
+
+/* Safe area for mobile bottom nav */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
