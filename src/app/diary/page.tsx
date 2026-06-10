@@ -32,12 +32,11 @@ export default function DiaryPage() {
     setLoadingHistory(true);
     try {
       const { getFirebaseDb } = await import('@/lib/firebase');
-      const { collection, query, where, getDocs, orderBy } = await import('firebase/firestore');
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
       const db = getFirebaseDb();
       const q = query(
         collection(db, 'meals'),
-        where('userId', '==', firebaseUser.uid),
-        orderBy('date', 'desc')
+        where('userId', '==', firebaseUser.uid)
       );
       const querySnapshot = await getDocs(q);
       const loadedMeals: Meal[] = [];
@@ -58,6 +57,7 @@ export default function DiaryPage() {
           mealType: data.mealType || 'lunch',
         });
       });
+      loadedMeals.sort((a, b) => b.date.getTime() - a.date.getTime());
       setMeals(loadedMeals.length > 0 ? loadedMeals : mockMeals);
     } catch (err) {
       console.error('Erro ao carregar refeições:', err);
@@ -89,11 +89,19 @@ export default function DiaryPage() {
           const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
           const storage = getFirebaseStorage();
           const imageRef = ref(storage, `meals/${firebaseUser.uid}/${Date.now()}_${file.name}`);
-          const snapshot = await uploadBytes(imageRef, file);
-          storageUrl = await getDownloadURL(snapshot.ref);
+          
+          const uploadPromise = uploadBytes(imageRef, file).then(async (snapshot) => {
+            return await getDownloadURL(snapshot.ref);
+          });
+          
+          const timeoutPromise = new Promise<string>((_, reject) =>
+            setTimeout(() => reject(new Error('Firebase Storage upload timeout')), 4000)
+          );
+          
+          storageUrl = await Promise.race([uploadPromise, timeoutPromise]);
           setSavedImageUrl(storageUrl);
         } catch (err) {
-          console.error('Erro no upload para o Storage, usando local preview:', err);
+          console.error('Erro ou timeout no upload para o Storage, usando local preview:', err);
           setSavedImageUrl(localUrl);
         }
       } else {
