@@ -1210,6 +1210,26 @@ export default function CalendarPage() {
                 <div className="md:col-span-7 flex flex-col h-[420px] border-t md:border-t-0 md:border-l border-outline-variant/30 md:pl-6 pt-4 md:pt-0">
                   {type === 'meal' && (
                     <>
+                      {/* AI Auto Suggestion Button */}
+                      <button
+                        type="button"
+                        onClick={handleProposePlan}
+                        disabled={proposingPlan}
+                        className="mb-4 bg-primary-container text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-sm shrink-0"
+                      >
+                        {proposingPlan ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" />
+                            A gerar refeições e treino do dia...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={14} />
+                            Criar Automaticamente Refeições e Treino com IA
+                          </>
+                        )}
+                      </button>
+
                       {/* Selector Tabs */}
                       <div className="flex border-b border-surface-container pb-2 mb-3">
                         <button
