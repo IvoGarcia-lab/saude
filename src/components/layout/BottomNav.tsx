@@ -8,12 +8,14 @@ import {
   Camera,
   Dumbbell,
   Brain,
+  Calendar,
 } from 'lucide-react';
 
 const tabs = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/diary', label: 'Diary', icon: Camera },
-  { href: '/workouts', label: 'Workouts', icon: Dumbbell },
+  { href: '/diary', label: 'Diário', icon: Camera },
+  { href: '/calendar', label: 'Calendário', icon: Calendar },
+  { href: '/workouts', label: 'Treino', icon: Dumbbell },
   { href: '/insights', label: 'Insights', icon: Brain },
 ] as const;
 

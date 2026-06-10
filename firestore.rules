@@ -27,5 +27,11 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
     }
+
+    // Events Collection
+    match /events/{eventId} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
   }
 }
