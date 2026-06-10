@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Calendar as CalendarIcon, Clock, Plus, Trash2, Sparkles, Loader2, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { CoachInsight } from '@/components/dashboard/CoachInsight';
-import { cn } from '@/lib/utils';
+import { cn, calculateBMR, calculateTDEE, calculateMacros } from '@/lib/utils';
 
 interface CalendarEvent {
   id?: string;
@@ -174,6 +174,108 @@ export default function CalendarPage() {
   };
 
   // 4. Trigger AI Calendar Analysis
+  const [proposingPlan, setProposingPlan] = useState(false);
+
+  const handleProposePlan = async () => {
+    setProposingPlan(true);
+    try {
+      let calories = 2000;
+      let protein = 140;
+      let carbs = 200;
+      let fat = 65;
+      
+      if (profile) {
+        const bmr = calculateBMR(profile.weight, profile.height, profile.age);
+        const tdee = calculateTDEE(bmr);
+        calories = Math.round(
+          profile.goal === 'lose' ? tdee - 500 : profile.goal === 'gain' ? tdee + 500 : tdee
+        );
+        const macros = calculateMacros(calories, profile.goal || 'maintain');
+        protein = Math.round(macros.protein);
+        carbs = Math.round(macros.carbs);
+        fat = Math.round(macros.fat);
+      }
+
+      // 1. Fetch meal suggestion
+      const mealsRes = await fetch('/api/suggest-meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caloriesGoal: calories,
+          proteinGoal: protein,
+          carbsGoal: carbs,
+          fatGoal: fat,
+          restrictions: profile?.restrictions || [],
+        }),
+      });
+      const mealsData = await mealsRes.json();
+      
+      // 2. Fetch workout suggestion
+      const workoutRes = await fetch('/api/generate-workout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goal: profile?.goal || 'maintain',
+          experience: 'intermediate',
+          schedule: '3x',
+          restrictions: profile?.restrictions || [],
+          medication: profile?.medication || '',
+        }),
+      });
+      const workoutData = await workoutRes.json();
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const newEvents: CalendarEvent[] = [];
+
+      if (mealsData.success && mealsData.data?.meals) {
+        mealsData.data.meals.forEach((meal: any) => {
+          const mealTypeEmoji = meal.type === 'pequeno-almoço' ? '🌅' : meal.type === 'almoço' ? '🍽️' : meal.type === 'jantar' ? '🌙' : '🍎';
+          const time = meal.type === 'pequeno-almoço' ? '08:00' : meal.type === 'almoço' ? '13:00' : meal.type === 'jantar' ? '20:00' : '17:00';
+          newEvents.push({
+            title: `${mealTypeEmoji} Proposto: ${meal.title} (${meal.totalCalories} kcal)`,
+            type: 'meal',
+            dateStr: todayStr,
+            timeStr: time,
+            description: `Alimentos: ${meal.items.map((i: any) => `${i.name} (${i.quantity})`).join(', ')}.\nPrep: ${meal.instructions}`,
+          });
+        });
+      }
+
+      if (workoutData.success && workoutData.data?.workout) {
+        newEvents.push({
+          title: `🏋️ Proposto: Treino ${workoutData.data.workout.name || 'Personalizado'}`,
+          type: 'workout',
+          dateStr: todayStr,
+          timeStr: '18:30',
+          description: `Exercícios:\n${workoutData.data.workout.exercises.map((e: any) => `- ${e.name}: ${e.sets} séries x ${e.reps} (${e.rest} rest)`).join('\n')}`,
+        });
+      }
+
+      // Save all proposed events
+      if (isDemo || !firebaseUser) {
+        const updated = [...events, ...newEvents];
+        setEvents(updated);
+        localStorage.setItem('demo_events', JSON.stringify(updated));
+      } else {
+        const { getFirebaseDb } = await import('@/lib/firebase');
+        const { collection, addDoc } = await import('firebase/firestore');
+        const db = getFirebaseDb();
+        for (const ev of newEvents) {
+          await addDoc(collection(db, 'events'), {
+            ...ev,
+            userId: firebaseUser.uid,
+            createdAt: new Date(),
+          });
+        }
+        await fetchEvents();
+      }
+    } catch (err) {
+      console.error('Erro ao propor plano por IA:', err);
+    } finally {
+      setProposingPlan(false);
+    }
+  };
+
   const handleAnalyzeCalendar = async () => {
     setAiLoading(true);
     setAiReport(null);
@@ -387,6 +489,21 @@ export default function CalendarPage() {
                 <>
                   <Sparkles size={14} />
                   Calcular Progresso & Fadiga
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleProposePlan}
+              disabled={proposingPlan}
+              className="w-full border-2 border-ai-indigo/20 text-ai-indigo py-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:bg-ai-indigo/5 active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {proposingPlan ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <>
+                  <Sparkles size={14} fill="currentColor" />
+                  Propor Refeições e Treino do Dia
                 </>
               )}
             </button>

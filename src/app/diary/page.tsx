@@ -183,14 +183,45 @@ export default function DiaryPage() {
       mealType,
     };
 
-    if (!isDemo && firebaseUser) {
+    // Construct calendar event
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const timeStr = String(today.getHours()).padStart(2, '0') + ':' + String(today.getMinutes()).padStart(2, '0');
+
+    const mealTypeEmoji = mealType === 'breakfast' ? '🌅' : mealType === 'lunch' ? '🍽️' : mealType === 'dinner' ? '🌙' : '🍎';
+    const mealTypeLabel = mealType === 'breakfast' ? 'Pequeno-almoço' : mealType === 'lunch' ? 'Almoço' : mealType === 'dinner' ? 'Jantar' : 'Snack';
+
+    const calendarEvent = {
+      userId: firebaseUser?.uid || 'demo-user-001',
+      title: `${mealTypeEmoji} ${mealTypeLabel} (${analysis.calories} kcal)`,
+      type: 'meal',
+      dateStr,
+      timeStr,
+      description: `Alimentos: ${analysis.foods.map(f => `${f.name} (${f.quantity})`).join(', ')}. Proteína: ${analysis.protein}g, Hidratos: ${analysis.carbs}g, Gordura: ${analysis.fat}g.`,
+      createdAt: new Date(),
+    };
+
+    if (isDemo || !firebaseUser) {
+      // Save to local storage events
+      const local = localStorage.getItem('demo_events');
+      const currentEvents = local ? JSON.parse(local) : [];
+      const updatedEvents = [...currentEvents, calendarEvent];
+      localStorage.setItem('demo_events', JSON.stringify(updatedEvents));
+    } else {
       try {
         const { getFirebaseDb } = await import('@/lib/firebase');
         const { collection, addDoc } = await import('firebase/firestore');
         const db = getFirebaseDb();
+        
+        // Save to meals collection
         await addDoc(collection(db, 'meals'), newMeal);
+        // Save to events collection
+        await addDoc(collection(db, 'events'), calendarEvent);
       } catch (err) {
-        console.error('Erro ao guardar refeição no Firestore:', err);
+        console.error('Erro ao guardar refeição/evento no Firebase:', err);
       }
     }
 
@@ -207,13 +238,41 @@ export default function DiaryPage() {
 
   return (
     <div className="px-4 md:px-10 max-w-[1280px] mx-auto py-8 page-enter">
-      <div className="mb-8">
-        <h2 className="font-display text-2xl font-semibold text-primary mb-2">
-          Registo de Refeição
-        </h2>
-        <p className="text-on-surface-variant">
-          Capture o seu prato e deixe a nossa IA calcular os seus macros instantaneamente.
-        </p>
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display text-2xl font-semibold text-primary mb-2">
+            Registo de Refeição
+          </h2>
+          <p className="text-on-surface-variant text-sm">
+            Capture o seu prato e deixe a nossa IA calcular os seus macros instantaneamente.
+          </p>
+        </div>
+      </div>
+
+      {/* ---- Tab Navigation ---- */}
+      <div className="flex border-b border-outline-variant/30 mb-8 gap-6">
+        <button
+          onClick={() => setState('upload')}
+          className={cn(
+            'pb-3 text-sm font-semibold border-b-2 transition-all',
+            state === 'upload' || state === 'analyzing' || state === 'result'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
+          )}
+        >
+          Registar Nova Refeição
+        </button>
+        <button
+          onClick={() => setState('history')}
+          className={cn(
+            'pb-3 text-sm font-semibold border-b-2 transition-all',
+            state === 'history'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-on-surface-variant hover:text-on-surface'
+          )}
+        >
+          Histórico de Refeições
+        </button>
       </div>
 
       {/* ---- Upload Zone ---- */}
