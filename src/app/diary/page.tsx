@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Camera, Upload, Check, Pencil, X, Loader2, Utensils } from 'lucide-react';
+import { Camera, Upload, Check, Pencil, X, Loader2, Utensils, Trash2 } from 'lucide-react';
 import { CoachInsight } from '@/components/dashboard/CoachInsight';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { mockMeals } from '@/lib/mock-data';
@@ -227,6 +227,25 @@ export default function DiaryPage() {
 
     await fetchMeals();
     setState('history');
+  };
+
+  const handleDeleteMeal = async (mealId?: string, localIndex?: number) => {
+    if (isDemo || !firebaseUser) {
+      const updated = meals.filter((_, idx) => idx !== localIndex);
+      setMeals(updated);
+      return;
+    }
+
+    if (!mealId) return;
+    try {
+      const { getFirebaseDb } = await import('@/lib/firebase');
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const db = getFirebaseDb();
+      await deleteDoc(doc(db, 'meals', mealId));
+      await fetchMeals();
+    } catch (err) {
+      console.error('Erro ao apagar refeição:', err);
+    }
   };
 
   const resetUpload = () => {
@@ -472,11 +491,20 @@ export default function DiaryPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-display text-lg font-semibold text-primary">
-                      {meal.calories}
-                    </p>
-                    <p className="text-xs text-on-surface-variant">kcal</p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="font-display text-lg font-semibold text-primary">
+                        {meal.calories}
+                      </p>
+                      <p className="text-xs text-on-surface-variant">kcal</p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteMeal(meal.id, meals.indexOf(meal))}
+                      className="text-outline hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/5"
+                      title="Apagar Refeição"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
               ))}
