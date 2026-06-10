@@ -60,7 +60,7 @@ export async function POST(request: Request) {
           'X-Title': 'O Meu Coach Inteligente',
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-3.2-11b-vision-instruct:free',
+          model: 'nvidia/nemotron-nano-12b-2-vl:free',
           messages: [
             {
               role: 'user',
