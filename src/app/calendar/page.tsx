@@ -82,6 +82,222 @@ export default function CalendarPage() {
       ingredients: '1 ovo, 2 colheres goma tapioca, 2 fatias peito peru, 30g requeijão',
       prep: 'Bater o ovo com a tapioca. Colocar na frigideira, dourar os dois lados, rechear e dobrar.',
       tags: ['gluten-free']
+    },
+    {
+      title: 'Omolete de Claras com Espinafres e Tomate',
+      category: 'Pequeno-almoço',
+      time: '12 min',
+      calories: 210,
+      protein: 24,
+      carbs: 6,
+      fat: 8,
+      ingredients: '1 ovo inteiro, 4 claras de ovo, 50g espinafres, 1 tomate picado, sal e pimenta',
+      prep: 'Bater os ovos e as claras. Adicionar os espinafres e tomate na frigideira antiaderente, juntar as claras e cozinhar.',
+      tags: ['gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Frango Grelhado com Arroz Basmati e Brócolos',
+      category: 'Almoço / Jantar',
+      time: '20 min',
+      calories: 460,
+      protein: 42,
+      carbs: 45,
+      fat: 8,
+      ingredients: '150g peito frango, 150g arroz basmati cozido, 100g brócolos cozidos, especiarias',
+      prep: 'Grelhar o peito de frango temperado com ervas e alho. Servir com o arroz quente e brócolos.',
+      tags: ['gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Salada de Atum com Grão de Bico e Ovo',
+      category: 'Almoço / Jantar',
+      time: '10 min',
+      calories: 420,
+      protein: 34,
+      carbs: 38,
+      fat: 12,
+      ingredients: '1 lata atum natural, 150g grão de bico cozido, 1 ovo cozido, salsa e cebola picadas',
+      prep: 'Misturar o atum escorrido com o grão de bico e cebola. Decorar com o ovo cozido às rodelas e salsa.',
+      tags: ['gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Panquecas de Aveia e Banana Fit',
+      category: 'Pequeno-almoço',
+      time: '15 min',
+      calories: 310,
+      protein: 16,
+      carbs: 48,
+      fat: 6,
+      ingredients: '1 banana madura, 40g aveia moída, 2 claras de ovo, canela a gosto',
+      prep: 'Esmagar a banana e misturar com a aveia, as claras e a canela até obter uma massa homogénea. Cozinhar colheradas numa frigideira quente.',
+      tags: ['lactose-free']
+    },
+    {
+      title: 'Esparguete Integral com Peru Picado',
+      category: 'Almoço / Jantar',
+      time: '25 min',
+      calories: 480,
+      protein: 36,
+      carbs: 55,
+      fat: 11,
+      ingredients: '70g esparguete integral (cru), 120g carne peru picada, molho tomate caseiro, alho',
+      prep: 'Cozer o esparguete. Cozinhar a carne com alho e molho de tomate natural. Misturar tudo no final.',
+      tags: ['lactose-free']
+    },
+    {
+      title: 'Batido Proteico de Morango e Chia',
+      category: 'Snack / Lanche',
+      time: '5 min',
+      calories: 250,
+      protein: 25,
+      carbs: 22,
+      fat: 4,
+      ingredients: '1 scoop whey morango, 150g morangos frescos, 200ml leite de amêndoa, 1 colher sopa sementes chia',
+      prep: 'Triturar todos os ingredientes num liquidificador até obter uma textura cremosa. Deixar repousar 2 minutos.',
+      tags: ['gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Pescada Cozida com Legumes e Azeite',
+      category: 'Almoço / Jantar',
+      time: '15 min',
+      calories: 330,
+      protein: 28,
+      carbs: 18,
+      fat: 14,
+      ingredients: '150g lombo pescada, 1 ovo cozido, 100g cenoura, 100g feijão-verde, 1 colher sobremesa azeite',
+      prep: 'Cozer a pescada, o feijão-verde e as cenouras às rodelas. Servir com o ovo cozido e regar com azeite.',
+      tags: ['gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Húmus Caseiro com Palitos de Pepino',
+      category: 'Snack / Lanche',
+      time: '10 min',
+      calories: 220,
+      protein: 8,
+      carbs: 26,
+      fat: 9,
+      ingredients: '100g grão-de-bico cozido, 1 colher chá tahini, sumo limão, alho, 1 pepino',
+      prep: 'Triturar o grão, tahini, sumo de limão e alho até obter um creme. Servir com palitos de pepino.',
+      tags: ['vegan', 'gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Papá de Lentilhas com Peru Crocante',
+      category: 'Almoço / Jantar',
+      time: '25 min',
+      calories: 390,
+      protein: 32,
+      carbs: 42,
+      fat: 8,
+      ingredients: '80g lentilhas vermelhas, 100g peito peru desfiado grelhado, cebola, alho',
+      prep: 'Cozer as lentilhas com cebola e alho até desfazer. Servir quente com o peru desfiado crocante no topo.',
+      tags: ['gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Bacalhau Fit ao Vapor com Batata e Grão',
+      category: 'Almoço / Jantar',
+      time: '20 min',
+      calories: 490,
+      protein: 41,
+      carbs: 45,
+      fat: 13,
+      ingredients: '150g lombo bacalhau fresco, 100g batata cozida, 100g grão de bico, brócolos, azeite',
+      prep: 'Cozinhar o bacalhau e os legumes ao vapor. Servir regado com uma colher de azeite.',
+      tags: ['gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Bifes de Peru com Cogumelos e Natas de Soja',
+      category: 'Almoço / Jantar',
+      time: '18 min',
+      calories: 380,
+      protein: 38,
+      carbs: 12,
+      fat: 18,
+      ingredients: '150g bifes peru, 100g cogumelos frescos, 70ml natas de soja light, alho',
+      prep: 'Grelhar os bifes de peru. Saltear os cogumelos com alho, juntar as natas de soja e envolver a carne.',
+      tags: ['gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Iogurte Grego com Granola e Sementes',
+      category: 'Snack / Lanche',
+      time: '5 min',
+      calories: 270,
+      protein: 18,
+      carbs: 24,
+      fat: 11,
+      ingredients: '150g iogurte grego natural ligeiro, 30g granola caseira sem açúcar, sementes de abóbora',
+      prep: 'Colocar o iogurte numa taça, cobrir com a granola e polvilhar com as sementes de abóbora.',
+      tags: ['gluten-free']
+    },
+    {
+      title: 'Wrap Integral de Frango e Abacate',
+      category: 'Snack / Lanche',
+      time: '10 min',
+      calories: 350,
+      protein: 28,
+      carbs: 26,
+      fat: 14,
+      ingredients: '1 tortilha integral, 100g frango desfiado, 40g abacate esmagado, alface e tomate',
+      prep: 'Barrar a tortilha com o abacate. Rechear com o frango desfiado, alface e fatias de tomate. Enrolar.',
+      tags: ['lactose-free']
+    },
+    {
+      title: 'Bolachas de Aveia e Maçã sem Açúcar',
+      category: 'Snack / Lanche',
+      time: '20 min',
+      calories: 180,
+      protein: 6,
+      carbs: 32,
+      fat: 4,
+      ingredients: '50g aveia em flocos, 1 maçã ralada, 1 ovo, canela a gosto',
+      prep: 'Misturar todos os ingredientes. Formar bolachas num tabuleiro com papel vegetal e levar ao forno 15 min.',
+      tags: ['lactose-free']
+    },
+    {
+      title: 'Quiche Fit de Legumes e Atum',
+      category: 'Almoço / Jantar',
+      time: '30 min',
+      calories: 310,
+      protein: 34,
+      carbs: 12,
+      fat: 13,
+      ingredients: '2 latas atum natural, 3 ovos, 100g curgete ralada, 50g cenoura ralada, salsa',
+      prep: 'Bater os ovos e envolver com o atum, cenoura e curgete. Levar ao forno numa forma de silicone por 25 min.',
+      tags: ['gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Sopa de Lentilhas Vermelhas e Coentros',
+      category: 'Pequeno-almoço',
+      time: '20 min',
+      calories: 190,
+      protein: 12,
+      carbs: 28,
+      fat: 3,
+      ingredients: '70g lentilhas vermelhas, 100g abóbora, 1 cebola, 1 dente alho, coentros frescos',
+      prep: 'Cozer as lentilhas com abóbora, cebola e alho. Triturar e servir com coentros frescos picados por cima.',
+      tags: ['vegan', 'gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Caril de Grão-de-Bico com Espinafres',
+      category: 'Almoço / Jantar',
+      time: '22 min',
+      calories: 390,
+      protein: 16,
+      carbs: 52,
+      fat: 12,
+      ingredients: '150g grão cozido, 100ml leite coco ligeiro, 50g espinafres, caril em pó, arroz de coco basmati',
+      prep: 'Cozinhar o grão no leite de coco com especiarias de caril por 10 min. Juntar espinafres no fim e servir com arroz.',
+      tags: ['vegan', 'gluten-free', 'lactose-free']
+    },
+    {
+      title: 'Espetadas de Frango com Pimentos',
+      category: 'Almoço / Jantar',
+      time: '20 min',
+      calories: 340,
+      protein: 38,
+      carbs: 10,
+      fat: 14,
+      ingredients: '150g peito frango aos cubos, pimento vermelho e verde, cebola, 1 colher azeite',
+      prep: 'Montar as espetadas intercalando frango, pimentos e cebola. Grelhar e regar ligeiramente com azeite.',
+      tags: ['gluten-free', 'lactose-free']
     }
   ];
 
@@ -128,7 +344,6 @@ export default function CalendarPage() {
     setSavingEvent(false);
   };
 
-  // New Event Form State
   const [showAddForm, setShowAddForm] = useState(false);
   const [title, setTitle] = useState('');
   const [type, setType] = useState<'workout' | 'meal' | 'assessment' | 'rest'>('workout');
@@ -136,6 +351,8 @@ export default function CalendarPage() {
   const [time, setTime] = useState('08:00');
   const [description, setDescription] = useState('');
   const [savingEvent, setSavingEvent] = useState(false);
+  const [recipeSearch, setRecipeSearch] = useState('');
+  const [mealTab, setMealTab] = useState<'recipes' | 'gallery'>('recipes');
 
   // AI Analysis State
   const [aiLoading, setAiLoading] = useState(false);
@@ -879,398 +1096,198 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ---- Section: Advanced Progress & Fatigue Calculator & Forecast ---- */}
-      <div className="bg-white border border-outline-variant/30 rounded-xl p-6 shadow-sm space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-container pb-4">
-          <div>
-            <h3 className="font-display text-xl font-bold text-on-surface flex items-center gap-2">
-              <Sparkles className="text-ai-indigo animate-pulse" size={20} fill="currentColor" />
-              Monitor de Fadiga e Projeção de Progresso
-            </h3>
-            <p className="text-on-surface-variant text-xs mt-1">
-              Simulação de stress de treino baseado no modelo dinâmico CTL (Adaptação) / ATL (Fadiga) e TSB (Balanço).
-            </p>
-          </div>
-          
-          {/* Quick Legend */}
-          <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-0.5 bg-error block" /> Fadiga (ATL)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-0.5 bg-medical-green block" /> Progresso (CTL)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-0.5 bg-ai-indigo block animate-pulse" /> Balanço (TSB)
-            </span>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* SVG Graph Column */}
-          <div className="lg:col-span-8 space-y-4">
-            <div className="relative bg-surface-container-lowest/40 border border-outline-variant/20 rounded-xl p-4 min-h-[260px] flex flex-col justify-between">
-              
-              {/* Tooltip Overlay */}
-              {hoveredPoint && (
-                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md border border-outline-variant/50 p-3 rounded-xl shadow-xl z-10 text-[11px] space-y-1.5 min-w-[170px] animate-fade-in">
-                  <p className="font-bold text-on-surface text-[12px] border-b pb-1 mb-1">
-                    🗓️ {hoveredPoint.label} {hoveredPoint.isToday && <span className="text-primary-container">(Hoje)</span>}
-                  </p>
-                  <p className="flex justify-between">
-                    <span className="text-on-surface-variant">Fadiga Muscular:</span>
-                    <span className="font-bold text-error">{hoveredPoint.atl}%</span>
-                  </p>
-                  <p className="flex justify-between">
-                    <span className="text-on-surface-variant">Adaptação Física:</span>
-                    <span className="font-bold text-medical-green">{hoveredPoint.ctl}%</span>
-                  </p>
-                  <p className="flex justify-between">
-                    <span className="text-on-surface-variant">Balanço de Forma:</span>
-                    <span className={cn("font-bold", hoveredPoint.tsb < -15 ? "text-error" : hoveredPoint.tsb > 5 ? "text-primary-container" : "text-alert-gold")}>
-                      {hoveredPoint.tsb}%
-                    </span>
-                  </p>
-                  <p className="flex justify-between border-t pt-1 mt-1">
-                    <span className="text-on-surface-variant">Ingestão/Plano:</span>
-                    <span className="font-semibold text-on-surface">{hoveredPoint.calories} kcal</span>
-                  </p>
-                  <p className="flex justify-between">
-                    <span className="text-on-surface-variant">Peso Previsto:</span>
-                    <span className="font-semibold text-on-surface">{hoveredPoint.weight} kg</span>
-                  </p>
-                </div>
-              )}
-
-              {/* The SVG Chart */}
-              <div className="w-full">
-                <svg viewBox="0 0 600 200" className="w-full h-auto overflow-visible select-none">
-                  {/* Grid Lines */}
-                  {[0, 25, 50, 75, 100].map((level) => {
-                    // Map level to y coordinate (range 0 to 100)
-                    const y = 170 - (level / 100) * 140;
-                    return (
-                      <g key={level}>
-                        <line x1="40" y1={y} x2="560" y2={y} stroke="#f1f5f9" strokeWidth="1" />
-                        <text x="30" y={y + 4} textAnchor="end" fontSize="9" fill="#94a3b8" fontWeight="600">
-                          {level}%
-                        </text>
-                      </g>
-                    );
-                  })}
-
-                  {/* Today vertical divider line */}
-                  <g>
-                    {/* Index 7 is today */}
-                    <line 
-                      x1={40 + (7 / 14) * 520} 
-                      y1="10" 
-                      x2={40 + (7 / 14) * 520} 
-                      y2="185" 
-                      stroke="#6366f1" 
-                      strokeWidth="1.5" 
-                      strokeDasharray="4,4" 
-                    />
-                    <text x={40 + (7 / 14) * 520} y="8" textAnchor="middle" fontSize="8" fill="#6366f1" fontWeight="bold">
-                      HOJE
-                    </text>
-                    
-                    {/* Labels indicating Past vs Forecast */}
-                    <text x={40 + (3.5 / 14) * 520} y="195" textAnchor="middle" fontSize="9" fill="#94a3b8" fontWeight="bold">
-                      ← HISTÓRICO
-                    </text>
-                    <text x={40 + (10.5 / 14) * 520} y="195" textAnchor="middle" fontSize="9" fill="#94a3b8" fontWeight="bold">
-                      PREVISÃO →
-                    </text>
-                  </g>
-
-                  {/* Draw Lines */}
-                  {/* Fatigue (ATL) - Red */}
-                  <path
-                    d={fatigueData.map((d, idx) => `${idx === 0 ? 'M' : 'L'} ${40 + (idx / 14) * 520} ${170 - (d.atl / 100) * 140}`).join(' ')}
-                    fill="none"
-                    stroke="#ef4444"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-
-                  {/* Progress/Fitness (CTL) - Green */}
-                  <path
-                    d={fatigueData.map((d, idx) => `${idx === 0 ? 'M' : 'L'} ${40 + (idx / 14) * 520} ${170 - (d.ctl / 100) * 140}`).join(' ')}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-
-                  {/* Stress Balance (TSB) - Indigo */}
-                  <path
-                    // Map TSB [-50, 50] to [0, 100] range for display
-                    d={fatigueData.map((d, idx) => {
-                      const tsbMapped = Math.max(-50, Math.min(50, d.tsb));
-                      const percent = (tsbMapped + 50); // 0 to 100
-                      return `${idx === 0 ? 'M' : 'L'} ${40 + (idx / 14) * 520} ${170 - (percent / 100) * 140}`;
-                    }).join(' ')}
-                    fill="none"
-                    stroke="#6366f1"
-                    strokeWidth="2.0"
-                    strokeDasharray="2,2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-
-                  {/* X-Axis labels and interaction nodes */}
-                  {fatigueData.map((d, idx) => {
-                    const x = 40 + (idx / 14) * 520;
-                    const yAtl = 170 - (d.atl / 100) * 140;
-                    
-                    return (
-                      <g key={idx} className="group">
-                        {/* Interactive vertical column region */}
-                        <rect
-                          x={x - 18}
-                          y="10"
-                          width="36"
-                          height="165"
-                          fill="transparent"
-                          onMouseEnter={() => setHoveredPoint(d)}
-                          onMouseLeave={() => setHoveredPoint(null)}
-                          className="cursor-pointer"
-                        />
-
-                        {/* Node dots */}
-                        <circle 
-                          cx={x} 
-                          cy={yAtl} 
-                          r={d.isToday ? 5 : 3} 
-                          fill={d.isToday ? "#ffffff" : "#ef4444"} 
-                          stroke="#ef4444" 
-                          strokeWidth={d.isToday ? 2.5 : 1}
-                          className="pointer-events-none transition-all duration-150 group-hover:r-5" 
-                        />
-                        
-                        {/* Date label */}
-                        <text x={x} y="185" textAnchor="middle" fontSize="8" fill={d.isToday ? "#6366f1" : "#64748b"} fontWeight={d.isToday ? "bold" : "500"}>
-                          {d.label.split(' ')[0]}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </svg>
-              </div>
-            </div>
-            
-            <p className="text-[11px] text-on-surface-variant italic leading-relaxed text-center">
-              Passe o rato ou toque nas colunas do gráfico para ver a evolução precisa e projeções de calorias/peso para cada dia.
-            </p>
-          </div>
-
-          {/* Metrics & Clinical recommendations Column */}
-          <div className="lg:col-span-4 space-y-4">
-            {/* Status Card */}
-            {(() => {
-              const todayStats = fatigueData[7]; // index 7 is always today
-              if (!todayStats) return null;
-
-              let statusLabel = 'Equilibrado';
-              let statusDesc = 'O stress de treino está na zona ideal de adaptação metabólica e hipertrofia.';
-              let statusColorClass = 'text-alert-gold bg-alert-gold/5 border-alert-gold/20';
-              let statusBadgeColor = 'bg-alert-gold';
-
-              if (todayStats.tsb < -15) {
-                statusLabel = 'Sobrecarga Muscular';
-                statusDesc = 'Alto nível de fadiga acumulada. Alto risco de lesão e overreaching. Priorize descanso hoje.';
-                statusColorClass = 'text-error bg-error/5 border-error/20';
-                statusBadgeColor = 'bg-error';
-              } else if (todayStats.tsb > 5) {
-                statusLabel = 'Fresco / Recuperado';
-                statusDesc = 'Nível de regeneração ótimo. Ótimo momento para um treino de força máxima ou progressão de carga.';
-                statusColorClass = 'text-medical-green bg-medical-green/5 border-medical-green/20';
-                statusBadgeColor = 'bg-medical-green';
-              }
-
-              // Find future peak fatigue
-              const futureData = fatigueData.slice(8);
-              let peakFatigueDay = todayStats;
-              futureData.forEach(d => {
-                if (d.atl > peakFatigueDay.atl) {
-                  peakFatigueDay = d;
-                }
-              });
-
-              // Weight difference forecast
-              const weightDiff = (fatigueData[14]?.weight - todayStats.weight).toFixed(2);
-              const isGain = parseFloat(weightDiff) > 0;
-
-              return (
-                <div className="space-y-4">
-                  {/* Status Banner */}
-                  <div className={cn("border rounded-xl p-4 space-y-2", statusColorClass)}>
-                    <div className="flex items-center gap-2 font-bold text-sm">
-                      <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", statusBadgeColor)} />
-                      Estado Hoje: {statusLabel}
-                    </div>
-                    <p className="text-xs leading-relaxed opacity-90">{statusDesc}</p>
-                  </div>
-
-                  {/* Quantitative Data Panels */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-surface-container-low border rounded-xl p-3 text-center">
-                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Fadiga Atual</p>
-                      <p className="text-2xl font-bold text-error mt-1">{todayStats.atl}%</p>
-                    </div>
-                    <div className="bg-surface-container-low border rounded-xl p-3 text-center">
-                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Forma (TSB)</p>
-                      <p className="text-2xl font-bold text-primary mt-1">{todayStats.tsb}%</p>
-                    </div>
-                  </div>
-
-                  {/* Predictions & Projections */}
-                  <div className="border border-outline-variant/30 rounded-xl p-4 bg-surface-container-lowest space-y-3 text-xs leading-5">
-                    <p className="font-bold text-on-surface text-[13px] border-b pb-1.5">
-                      🔮 Previsões Clínicas & Metas (7 Dias)
-                    </p>
-                    
-                    <div>
-                      <span className="font-bold text-on-surface block">Pico de Stress Muscular:</span>
-                      <span className="text-on-surface-variant">
-                        Previsto para <strong className="text-error">{peakFatigueDay.label.split(' ')[0]} de {monthNames[peakFatigueDay.rawDate.getMonth()]}</strong> atingindo <strong>{peakFatigueDay.atl}%</strong> de fadiga. Ajuste os treinos seguintes.
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="font-bold text-on-surface block">Projeção Ponderal:</span>
-                      <span className="text-on-surface-variant">
-                        Peso estimado no dia {fatigueData[14]?.label}: <strong>{fatigueData[14]?.weight} kg</strong> ({isGain ? '+' : ''}{weightDiff} kg comparado a hoje).
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="font-bold text-on-surface block">Recomendação Inteligente:</span>
-                      <span className="text-on-surface-variant italic">
-                        {todayStats.tsb < -15 
-                          ? "Insira um dia de descanso completo ou uma sessão de alongamento/mobilidade ligeira no calendário para acelerar a drenagem de lactato."
-                          : "Consistência adequada. Mantenha o planeamento calórico atual de acordo com o seu perfil nutricional."}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      </div>
 
       {/* ---- Add Event Dialog Modal ---- */}
       {showAddForm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 page-enter">
-            <div className="flex justify-between items-center pb-2 border-b">
+          <div className={cn("bg-white border rounded-2xl w-full p-6 shadow-2xl space-y-4 page-enter transition-all duration-300", type === 'meal' ? 'max-w-4xl' : 'max-w-md')}>
+            <div className="flex justify-between items-center pb-2 border-b w-full">
               <h3 className="font-display text-lg font-bold text-primary">Agendar Novo Evento</h3>
               <button onClick={() => setShowAddForm(false)} className="text-outline hover:text-on-surface p-1">
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleAddEvent} className="space-y-4">
-              {type === 'meal' && loggedMeals.length > 0 && (
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase">Importar Refeição do Diário</label>
-                  <select
-                    onChange={(e) => {
-                      const mealId = e.target.value;
-                      if (!mealId) return;
-                      const selected = loggedMeals.find((m) => m.id === mealId || m.imageUrl === mealId);
-                      if (selected) {
-                        const mealTypeLabel = selected.mealType === 'breakfast' ? 'Pequeno-almoço' : selected.mealType === 'lunch' ? 'Almoço' : selected.mealType === 'dinner' ? 'Jantar' : 'Snack';
-                        const emoji = selected.mealType === 'breakfast' ? '🌅' : selected.mealType === 'lunch' ? '🍽️' : selected.mealType === 'dinner' ? '🌙' : '🍎';
-                        setTitle(`${emoji} ${mealTypeLabel} (${selected.calories} kcal)`);
-                        setDescription(`Alimentos: ${selected.foods.map(f => `${f.name} (${f.quantity})`).join(', ')}.\nProteína: ${selected.protein}g, Hidratos: ${selected.carbs}g, Gordura: ${selected.fat}g.`);
-                      }
-                    }}
-                    className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">-- Escolher refeição registada --</option>
-                    {loggedMeals.map((m, idx) => (
-                      <option key={m.id || idx} value={m.id || m.imageUrl}>
-                        {m.mealType === 'breakfast' ? '🌅' : m.mealType === 'lunch' ? '🍽️' : m.mealType === 'dinner' ? '🌙' : '🍎'} {m.mealType.toUpperCase()} - {m.foods.map(f => f.name).slice(0, 2).join(', ')} ({m.calories} kcal)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            <div className={cn("grid gap-6", type === 'meal' ? 'grid-cols-1 md:grid-cols-12' : 'grid-cols-1')}>
+              {/* Form Column */}
+              <form onSubmit={handleAddEvent} className={cn("space-y-4", type === 'meal' ? 'md:col-span-5' : 'w-full')}>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-on-surface-variant uppercase">Tipo</label>
+                    <select
+                      value={type}
+                      onChange={(e: any) => setType(e.target.value)}
+                      className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="workout">🏋️ Treino</option>
+                      <option value="meal">🥗 Alimentação</option>
+                      <option value="assessment">📏 Avaliação</option>
+                      <option value="rest">🛌 Descanso</option>
+                    </select>
+                  </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-on-surface-variant uppercase">Título</label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Treino de Força, Preparação de Refeição..."
-                  className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase">Tipo</label>
-                  <select
-                    value={type}
-                    onChange={(e: any) => setType(e.target.value)}
-                    className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="workout">🏋️ Treino</option>
-                    <option value="meal">🥗 Alimentação</option>
-                    <option value="assessment">📏 Avaliação</option>
-                    <option value="rest">🛌 Descanso</option>
-                  </select>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-on-surface-variant uppercase">Hora</label>
+                    <input
+                      type="time"
+                      required
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase">Hora</label>
+                  <label className="text-xs font-bold text-on-surface-variant uppercase">Data</label>
                   <input
-                    type="time"
+                    type="date"
                     required
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
                     className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-on-surface-variant uppercase">Data</label>
-                <input
-                  type="date"
-                  required
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase">Título</label>
+                  <input
+                    type="text"
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Ex: Treino de Força, Preparação de Refeição..."
+                    className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-on-surface-variant uppercase">Descrição (Opcional)</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Instruções extra..."
-                  rows={2}
-                  className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary resize-none"
-                />
-              </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase">Descrição (Opcional)</label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Instruções ou ingredientes..."
+                    rows={type === 'meal' ? 4 : 2}
+                    className="w-full bg-surface-container-low border-none rounded-xl p-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary resize-none"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                disabled={savingEvent}
-                className="w-full bg-primary-container text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md"
-              >
-                {savingEvent ? <Loader2 size={16} className="animate-spin" /> : 'Confirmar Agendamento'}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={savingEvent}
+                  className="w-full bg-primary-container text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md"
+                >
+                  {savingEvent ? <Loader2 size={16} className="animate-spin" /> : 'Confirmar Agendamento'}
+                </button>
+              </form>
+
+              {/* Selector Column (Only for Meal type) */}
+              {type === 'meal' && (
+                <div className="md:col-span-7 flex flex-col h-[420px] border-t md:border-t-0 md:border-l border-outline-variant/30 md:pl-6 pt-4 md:pt-0">
+                  {/* Selector Tabs */}
+                  <div className="flex border-b border-surface-container pb-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setMealTab('recipes')}
+                      className={cn(
+                        "flex-1 pb-2 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-all",
+                        mealTab === 'recipes' ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-on-surface"
+                      )}
+                    >
+                      📖 Livro de Receitas ({filteredRecipes.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMealTab('gallery')}
+                      className={cn(
+                        "flex-1 pb-2 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-all",
+                        mealTab === 'gallery' ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-on-surface"
+                      )}
+                    >
+                      📸 Galeria de Fotos ({loggedMeals.length})
+                    </button>
+                  </div>
+
+                  {mealTab === 'recipes' && (
+                    <div className="flex flex-col flex-1 min-h-0 space-y-3">
+                      {/* Search Recipes */}
+                      <input
+                        type="text"
+                        placeholder="Pesquisar receita..."
+                        value={recipeSearch}
+                        onChange={(e) => setRecipeSearch(e.target.value)}
+                        className="bg-surface-container-low border-none rounded-xl p-2.5 text-xs text-on-surface outline-none focus:ring-1 focus:ring-primary w-full"
+                      />
+
+                      {/* Recipe List */}
+                      <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                        {filteredRecipes
+                          .filter(r => r.title.toLowerCase().includes(recipeSearch.toLowerCase()))
+                          .map((recipe, idx) => (
+                            <div
+                              key={idx}
+                              className="p-3 border border-outline-variant/20 rounded-xl space-y-1 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer"
+                              onClick={() => {
+                                setTitle(`🥗 Receita: ${recipe.title}`);
+                                setDescription(`Ingredientes: ${recipe.ingredients}\nMacros: ${recipe.calories} kcal, P: ${recipe.protein}g, C: ${recipe.carbs}g, G: ${recipe.fat}g\nPreparo: ${recipe.prep}`);
+                              }}
+                            >
+                              <div className="flex justify-between items-start">
+                                <p className="font-semibold text-on-surface text-xs leading-5">{recipe.title}</p>
+                                <span className="text-[10px] bg-primary/5 text-primary px-1.5 py-0.5 rounded font-bold shrink-0">{recipe.calories} kcal</span>
+                              </div>
+                              <p className="text-[10px] text-on-surface-variant font-medium">{recipe.category} • Prep: {recipe.time}</p>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {mealTab === 'gallery' && (
+                    <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+                      {loggedMeals.length === 0 ? (
+                        <div className="text-center py-12 text-on-surface-variant text-xs">
+                          Nenhuma refeição encontrada na sua galeria do diário.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          {loggedMeals.map((meal, idx) => (
+                            <div
+                              key={meal.id || idx}
+                              className="border border-outline-variant/20 rounded-xl p-2 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer flex flex-col gap-2"
+                              onClick={() => {
+                                const mealTypeLabel = meal.mealType === 'breakfast' ? 'Pequeno-almoço' : meal.mealType === 'lunch' ? 'Almoço' : meal.mealType === 'dinner' ? 'Jantar' : 'Snack';
+                                setTitle(`🍽️ Galeria: ${mealTypeLabel} (${meal.calories} kcal)`);
+                                setDescription(`Alimentos: ${meal.foods.map((f: any) => `${f.name} (${f.quantity})`).join(', ')}.\nProteína: ${meal.protein}g, Hidratos: ${meal.carbs}g, Gordura: ${meal.fat}g.`);
+                              }}
+                            >
+                              {meal.imageUrl ? (
+                                <img
+                                  src={meal.imageUrl}
+                                  alt="Refeição"
+                                  className="w-full h-24 object-cover rounded-lg"
+                                />
+                              ) : (
+                                <div className="w-full h-24 bg-surface-container-low flex items-center justify-center rounded-lg text-on-surface-variant">
+                                  <Utensils size={24} />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-bold text-[11px] text-on-surface capitalize leading-tight">
+                                  {meal.mealType === 'breakfast' ? '🌅 P. Almoço' : meal.mealType === 'lunch' ? '🍽️ Almoço' : meal.mealType === 'dinner' ? '🌙 Jantar' : '🍎 Snack'}
+                                </p>
+                                <p className="text-[10px] text-primary font-bold mt-0.5">{meal.calories} kcal</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

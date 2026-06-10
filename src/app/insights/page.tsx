@@ -1,14 +1,263 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus, Heart, Footprints, Moon, Dumbbell, Utensils, Loader2, Sparkles } from 'lucide-react';
 import { CoachInsight } from '@/components/dashboard/CoachInsight';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { mockDailySummary, mockMeals } from '@/lib/mock-data';
-import { calculateBMR, calculateTDEE, calculateMacros } from '@/lib/utils';
+import { cn, calculateBMR, calculateTDEE, calculateMacros } from '@/lib/utils';
+
+interface CalendarEvent {
+  id?: string;
+  title: string;
+  type: 'workout' | 'meal' | 'assessment' | 'rest';
+  dateStr: string;
+  timeStr: string;
+  description?: string;
+}
 
 export default function InsightsPage() {
-  const { profile } = useAuth();
+  const { profile, user: firebaseUser, isDemo } = useAuth();
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loggedMeals, setLoggedMeals] = useState<any[]>([]);
+  const [hoveredPoint, setHoveredPoint] = useState<any>(null);
+
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  // Fetch events
+  const fetchEvents = useCallback(async () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const formatDateString = (y: number, m: number, d: number) => {
+      const mm = String(m + 1).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      return `${y}-${mm}-${dd}`;
+    };
+
+    if (isDemo || !firebaseUser) {
+      const local = localStorage.getItem('demo_events');
+      if (local) {
+        setEvents(JSON.parse(local));
+      } else {
+        const defaultEvents: CalendarEvent[] = [
+          { title: 'Treino de Pernas', type: 'workout', dateStr: formatDateString(year, month, 12), timeStr: '08:30', description: 'Foco em quadríceps' },
+          { title: 'Consulta Nutricional', type: 'assessment', dateStr: formatDateString(year, month, 15), timeStr: '14:00', description: 'Medição de bioimpedância' },
+          { title: 'Preparação de Marmitas', type: 'meal', dateStr: formatDateString(year, month, 16), timeStr: '19:00', description: 'Marmitas para a semana inteira' },
+        ];
+        setEvents(defaultEvents);
+        localStorage.setItem('demo_events', JSON.stringify(defaultEvents));
+      }
+      return;
+    }
+    setLoading(true);
+    try {
+      const { getFirebaseDb } = await import('@/lib/firebase');
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const db = getFirebaseDb();
+      const q = query(
+        collection(db, 'events'),
+        where('userId', '==', firebaseUser.uid)
+      );
+      const snapshot = await getDocs(q);
+      const loaded: CalendarEvent[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        loaded.push({
+          id: doc.id,
+          title: data.title,
+          type: data.type,
+          dateStr: data.dateStr,
+          timeStr: data.timeStr,
+          description: data.description || '',
+        });
+      });
+      setEvents(loaded);
+    } catch (err) {
+      console.error('Erro ao carregar eventos:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [firebaseUser, isDemo]);
+
+  // Fetch logged meals
+  const fetchLoggedMeals = useCallback(async () => {
+    if (isDemo || !firebaseUser) {
+      setLoggedMeals(mockMeals);
+      return;
+    }
+    try {
+      const { getFirebaseDb } = await import('@/lib/firebase');
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const db = getFirebaseDb();
+      const q = query(
+        collection(db, 'meals'),
+        where('userId', '==', firebaseUser.uid)
+      );
+      const querySnapshot = await getDocs(q);
+      const loaded: any[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        loaded.push({
+          id: doc.id,
+          userId: data.userId,
+          imageUrl: data.imageUrl || '',
+          foods: data.foods || [],
+          calories: data.calories || 0,
+          protein: data.protein || 0,
+          carbs: data.carbs || 0,
+          fat: data.fat || 0,
+          feedback: data.feedback || '',
+          date: data.date?.toDate() || new Date(),
+          confirmed: data.confirmed || false,
+          mealType: data.mealType || 'lunch',
+        });
+      });
+      setLoggedMeals(loaded.length > 0 ? loaded : mockMeals);
+    } catch (err) {
+      console.error('Erro ao carregar refeições do diário:', err);
+    }
+  }, [firebaseUser, isDemo]);
+
+  useEffect(() => {
+    fetchEvents();
+    fetchLoggedMeals();
+  }, [fetchEvents, fetchLoggedMeals]);
+
+  const fatigueData = useMemo(() => {
+    const list: {
+      dateStr: string;
+      label: string;
+      atl: number;
+      ctl: number;
+      tsb: number;
+      calories: number;
+      weight: number;
+      isFuture: boolean;
+      isToday: boolean;
+      rawDate: Date;
+    }[] = [];
+
+    const todayDate = new Date();
+    const formatDateStr = (d: Date) => {
+      const yy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yy}-${mm}-${dd}`;
+    };
+    
+    const todayStr = formatDateStr(todayDate);
+    
+    // Get BMR & TDEE
+    const weight = profile?.weight || 70;
+    const height = profile?.height || 170;
+    const age = profile?.age || 30;
+    const goal = profile?.goal || 'maintain';
+    const bmr = calculateBMR(weight, height, age);
+    const tdee = Math.round(calculateTDEE(bmr));
+    
+    // Target calories
+    const targetCalories = Math.round(
+      goal === 'lose' ? tdee - 500 : goal === 'gain' ? tdee + 500 : tdee
+    );
+
+    // Initial values 21 days ago
+    let currentAtl = 15;
+    let currentCtl = 20;
+    let cumulativeKcalDiff = 0;
+
+    for (let i = -21; i <= 7; i++) {
+      const d = new Date();
+      d.setDate(todayDate.getDate() + i);
+      const dateStr = formatDateStr(d);
+
+      const isToday = dateStr === todayStr;
+      const isFuture = i > 0;
+
+      // Filter events
+      const dayEvents = events.filter((e) => e.dateStr === dateStr);
+      const workouts = dayEvents.filter((e) => e.type === 'workout');
+      const meals = dayEvents.filter((e) => e.type === 'meal');
+      const hasRest = dayEvents.some((e) => e.type === 'rest');
+
+      // Math Model
+      const numWorkouts = workouts.length;
+      const numMeals = meals.length;
+      
+      const atlDose = numWorkouts * 35;
+      const ctlDose = numWorkouts * 4 + (numWorkouts === 0 || hasRest ? 0.5 : 0);
+      const atlRecovery = numMeals * 8 + (hasRest ? 10 : 0);
+
+      currentAtl = (currentAtl * 0.70) + atlDose - atlRecovery;
+      if (currentAtl < 0) currentAtl = 0;
+      if (currentAtl > 100) currentAtl = 100;
+
+      currentCtl = (currentCtl * 0.95) + ctlDose;
+      if (currentCtl < 0) currentCtl = 0;
+      if (currentCtl > 100) currentCtl = 100;
+
+      const tsb = currentCtl - currentAtl;
+
+      // Caloric Calculation
+      let dayCalories = 0;
+      if (i <= 0) {
+        const matchedLogged = loggedMeals.filter((m) => {
+          const mDate = new Date(m.date);
+          const mm = String(mDate.getMonth() + 1).padStart(2, '0');
+          const dd = String(mDate.getDate()).padStart(2, '0');
+          const mStr = `${mDate.getFullYear()}-${mm}-${dd}`;
+          return mStr === dateStr;
+        });
+
+        if (matchedLogged.length > 0) {
+          dayCalories = matchedLogged.reduce((acc, m) => acc + m.calories, 0);
+        } else {
+          if (meals.length > 0) {
+            meals.forEach((m) => {
+              const kcalMatch = m.title.match(/(\d+)\s*kcal/) || (m.description && m.description.match(/(\d+)\s*kcal/));
+              dayCalories += kcalMatch ? parseInt(kcalMatch[1]) : 400;
+            });
+          } else {
+            dayCalories = targetCalories;
+          }
+        }
+      } else {
+        if (meals.length > 0) {
+          meals.forEach((m) => {
+            const kcalMatch = m.title.match(/(\d+)\s*kcal/) || (m.description && m.description.match(/(\d+)\s*kcal/));
+            dayCalories += kcalMatch ? parseInt(kcalMatch[1]) : 400;
+          });
+        } else {
+          dayCalories = targetCalories;
+        }
+      }
+
+      const calorieDiff = dayCalories - tdee;
+      cumulativeKcalDiff += calorieDiff;
+      
+      const weightForecast = weight + (cumulativeKcalDiff / 7700);
+      const label = `${d.getDate()} ${monthNames[d.getMonth()].slice(0, 3)}`;
+
+      list.push({
+        dateStr,
+        label,
+        atl: Math.round(currentAtl),
+        ctl: Math.round(currentCtl),
+        tsb: Math.round(tsb),
+        calories: dayCalories,
+        weight: parseFloat(weightForecast.toFixed(2)),
+        isFuture,
+        isToday,
+        rawDate: d
+      });
+    }
+
+    return list.slice(14);
+  }, [events, loggedMeals, profile]);
 
   // Dynamic calculations based on user profile
   let caloriesGoal = mockDailySummary.caloriesGoal;
@@ -168,6 +417,278 @@ export default function InsightsPage() {
           <span className="flex items-center gap-1">
             <div className="w-3 h-3 bg-primary-container rounded" /> Hoje
           </span>
+        </div>
+      </div>
+
+      {/* ---- Section: Advanced Progress & Fatigue Calculator & Forecast ---- */}
+      <div className="bg-white border border-outline-variant/30 rounded-xl p-6 shadow-sm space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-container pb-4">
+          <div>
+            <h3 className="font-display text-xl font-bold text-on-surface flex items-center gap-2">
+              <Sparkles className="text-ai-indigo animate-pulse" size={20} fill="currentColor" />
+              Monitor de Fadiga e Projeção de Progresso
+            </h3>
+            <p className="text-on-surface-variant text-xs mt-1">
+              Simulação de stress de treino baseado no modelo dinâmico CTL (Adaptação) / ATL (Fadiga) e TSB (Balanço).
+            </p>
+          </div>
+          
+          {/* Quick Legend */}
+          <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-0.5 bg-error block" /> Fadiga (ATL)
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-0.5 bg-medical-green block" /> Progresso (CTL)
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-0.5 bg-ai-indigo block animate-pulse" /> Balanço (TSB)
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* SVG Graph Column */}
+          <div className="lg:col-span-8 space-y-4">
+            <div className="relative bg-surface-container-lowest/40 border border-outline-variant/20 rounded-xl p-4 min-h-[260px] flex flex-col justify-between">
+              
+              {/* Tooltip Overlay */}
+              {hoveredPoint && (
+                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md border border-outline-variant/50 p-3 rounded-xl shadow-xl z-10 text-[11px] space-y-1.5 min-w-[170px] animate-fade-in">
+                  <p className="font-bold text-on-surface text-[12px] border-b pb-1 mb-1">
+                    🗓️ {hoveredPoint.label} {hoveredPoint.isToday && <span className="text-primary-container">(Hoje)</span>}
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-on-surface-variant">Fadiga Muscular:</span>
+                    <span className="font-bold text-error">{hoveredPoint.atl}%</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-on-surface-variant">Adaptação Física:</span>
+                    <span className="font-bold text-medical-green">{hoveredPoint.ctl}%</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-on-surface-variant">Balanço de Forma:</span>
+                    <span className={cn("font-bold", hoveredPoint.tsb < -15 ? "text-error" : hoveredPoint.tsb > 5 ? "text-primary-container" : "text-alert-gold")}>
+                      {hoveredPoint.tsb}%
+                    </span>
+                  </p>
+                  <p className="flex justify-between border-t pt-1 mt-1">
+                    <span className="text-on-surface-variant">Ingestão/Plano:</span>
+                    <span className="font-semibold text-on-surface">{hoveredPoint.calories} kcal</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-on-surface-variant">Peso Previsto:</span>
+                    <span className="font-semibold text-on-surface">{hoveredPoint.weight} kg</span>
+                  </p>
+                </div>
+              )}
+
+              {/* The SVG Chart */}
+              <div className="w-full">
+                <svg viewBox="0 0 600 200" className="w-full h-auto overflow-visible select-none">
+                  {/* Grid Lines */}
+                  {[0, 25, 50, 75, 100].map((level) => {
+                    const y = 170 - (level / 100) * 140;
+                    return (
+                      <g key={level}>
+                        <line x1="40" y1={y} x2="560" y2={y} stroke="#f1f5f9" strokeWidth="1" />
+                        <text x="30" y={y + 4} textAnchor="end" fontSize="9" fill="#94a3b8" fontWeight="600">
+                          {level}%
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* Today vertical divider line */}
+                  <g>
+                    <line 
+                      x1={40 + (7 / 14) * 520} 
+                      y1="10" 
+                      x2={40 + (7 / 14) * 520} 
+                      y2="185" 
+                      stroke="#6366f1" 
+                      strokeWidth="1.5" 
+                      strokeDasharray="4,4" 
+                    />
+                    <text x={40 + (7 / 14) * 520} y="8" textAnchor="middle" fontSize="8" fill="#6366f1" fontWeight="bold">
+                      HOJE
+                    </text>
+                    
+                    <text x={40 + (3.5 / 14) * 520} y="195" textAnchor="middle" fontSize="9" fill="#94a3b8" fontWeight="bold">
+                      ← HISTÓRICO
+                    </text>
+                    <text x={40 + (10.5 / 14) * 520} y="195" textAnchor="middle" fontSize="9" fill="#94a3b8" fontWeight="bold">
+                      PREVISÃO →
+                    </text>
+                  </g>
+
+                  {/* Draw Lines */}
+                  <path
+                    d={fatigueData.map((d, idx) => `${idx === 0 ? 'M' : 'L'} ${40 + (idx / 14) * 520} ${170 - (d.atl / 100) * 140}`).join(' ')}
+                    fill="none"
+                    stroke="#ef4444"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                  <path
+                    d={fatigueData.map((d, idx) => `${idx === 0 ? 'M' : 'L'} ${40 + (idx / 14) * 520} ${170 - (d.ctl / 100) * 140}`).join(' ')}
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                  <path
+                    // Map TSB [-50, 50] to [0, 100] range for display
+                    d={fatigueData.map((d, idx) => {
+                      const tsbMapped = Math.max(-50, Math.min(50, d.tsb));
+                      const percent = (tsbMapped + 50);
+                      return `${idx === 0 ? 'M' : 'L'} ${40 + (idx / 14) * 520} ${170 - (percent / 100) * 140}`;
+                    }).join(' ')}
+                    fill="none"
+                    stroke="#6366f1"
+                    strokeWidth="2.0"
+                    strokeDasharray="2,2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+
+                  {/* X-Axis labels and interaction nodes */}
+                  {fatigueData.map((d, idx) => {
+                    const x = 40 + (idx / 14) * 520;
+                    const yAtl = 170 - (d.atl / 100) * 140;
+                    
+                    return (
+                      <g key={idx} className="group">
+                        <rect
+                          x={x - 18}
+                          y="10"
+                          width="36"
+                          height="165"
+                          fill="transparent"
+                          onMouseEnter={() => setHoveredPoint(d)}
+                          onMouseLeave={() => setHoveredPoint(null)}
+                          className="cursor-pointer"
+                        />
+
+                        <circle 
+                          cx={x} 
+                          cy={yAtl} 
+                          r={d.isToday ? 5 : 3} 
+                          fill={d.isToday ? "#ffffff" : "#ef4444"} 
+                          stroke="#ef4444" 
+                          strokeWidth={d.isToday ? 2.5 : 1}
+                          className="pointer-events-none transition-all duration-150 group-hover:r-5" 
+                        />
+                        
+                        <text x={x} y="185" textAnchor="middle" fontSize="8" fill={d.isToday ? "#6366f1" : "#64748b"} fontWeight={d.isToday ? "bold" : "500"}>
+                          {d.label.split(' ')[0]}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            </div>
+            
+            <p className="text-[11px] text-on-surface-variant italic leading-relaxed text-center">
+              Passe o rato ou toque nas colunas do gráfico para ver a evolução precisa e projeções de calorias/peso para cada dia.
+            </p>
+          </div>
+
+          {/* Metrics & Clinical recommendations Column */}
+          <div className="lg:col-span-4 space-y-4">
+            {/* Status Card */}
+            {(() => {
+              const todayStats = fatigueData[7];
+              if (!todayStats) return null;
+
+              let statusLabel = 'Equilibrado';
+              let statusDesc = 'O stress de treino está na zona ideal de adaptação metabólica e hipertrofia.';
+              let statusColorClass = 'text-alert-gold bg-alert-gold/5 border-alert-gold/20';
+              let statusBadgeColor = 'bg-alert-gold';
+
+              if (todayStats.tsb < -15) {
+                statusLabel = 'Sobrecarga Muscular';
+                statusDesc = 'Alto nível de fadiga acumulada. Alto risco de lesão e overreaching. Priorize descanso hoje.';
+                statusColorClass = 'text-error bg-error/5 border-error/20';
+                statusBadgeColor = 'bg-error';
+              } else if (todayStats.tsb > 5) {
+                statusLabel = 'Fresco / Recuperado';
+                statusDesc = 'Nível de regeneração ótimo. Ótimo momento para um treino de força máxima ou progressão de carga.';
+                statusColorClass = 'text-medical-green bg-medical-green/5 border-medical-green/20';
+                statusBadgeColor = 'bg-medical-green';
+              }
+
+              // Find future peak fatigue
+              const futureData = fatigueData.slice(8);
+              let peakFatigueDay = todayStats;
+              futureData.forEach(d => {
+                if (d.atl > peakFatigueDay.atl) {
+                  peakFatigueDay = d;
+                }
+              });
+
+              // Weight difference forecast
+              const weightDiff = (fatigueData[14]?.weight - todayStats.weight).toFixed(2);
+              const isGain = parseFloat(weightDiff) > 0;
+
+              return (
+                <div className="space-y-4">
+                  <div className={cn("border rounded-xl p-4 space-y-2", statusColorClass)}>
+                    <div className="flex items-center gap-2 font-bold text-sm">
+                      <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", statusBadgeColor)} />
+                      Estado Hoje: {statusLabel}
+                    </div>
+                    <p className="text-xs leading-relaxed opacity-90">{statusDesc}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-surface-container-low border rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Fadiga Atual</p>
+                      <p className="text-2xl font-bold text-error mt-1">{todayStats.atl}%</p>
+                    </div>
+                    <div className="bg-surface-container-low border rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Forma (TSB)</p>
+                      <p className="text-2xl font-bold text-primary mt-1">{todayStats.tsb}%</p>
+                    </div>
+                  </div>
+
+                  <div className="border border-outline-variant/30 rounded-xl p-4 bg-surface-container-lowest space-y-3 text-xs leading-5">
+                    <p className="font-bold text-on-surface text-[13px] border-b pb-1.5">
+                      🔮 Previsões Clínicas & Metas (7 Dias)
+                    </p>
+                    
+                    <div>
+                      <span className="font-bold text-on-surface block">Pico de Stress Muscular:</span>
+                      <span className="text-on-surface-variant">
+                        Previsto para <strong className="text-error">{peakFatigueDay.label.split(' ')[0]} de {monthNames[peakFatigueDay.rawDate.getMonth()]}</strong> atingindo <strong>{peakFatigueDay.atl}%</strong> de fadiga. Ajuste os treinos seguintes.
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="font-bold text-on-surface block">Projeção Ponderal:</span>
+                      <span className="text-on-surface-variant">
+                        Peso estimado no dia {fatigueData[14]?.label}: <strong>{fatigueData[14]?.weight} kg</strong> ({isGain ? '+' : ''}{weightDiff} kg comparado a hoje).
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="font-bold text-on-surface block">Recomendação Inteligente:</span>
+                      <span className="text-on-surface-variant italic">
+                        {todayStats.tsb < -15 
+                          ? "Insira um dia de descanso completo ou uma sessão de alongamento/mobilidade ligeira no calendário para acelerar a drenagem de lactato."
+                          : "Consistência adequada. Mantenha o planeamento calórico atual de acordo com o seu perfil nutricional."}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         </div>
       </div>
 
