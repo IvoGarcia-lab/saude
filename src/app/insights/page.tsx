@@ -62,15 +62,63 @@ export default function InsightsPage() {
     }
   ];
 
+  // Meal Suggester State
+  const [suggestedPlan, setSuggestedPlan] = useState<any>(null);
+  const [loadingPlan, setLoadingPlan] = useState(false);
+
+  const handleSuggestMeals = async () => {
+    setLoadingPlan(true);
+    setSuggestedPlan(null);
+    try {
+      const res = await fetch('/api/suggest-meals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          caloriesGoal,
+          proteinGoal,
+          carbsGoal: Math.round(caloriesGoal * 0.4 / 4), // estimation
+          fatGoal: Math.round(caloriesGoal * 0.3 / 9), // estimation
+          restrictions: profile?.restrictions || [],
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setSuggestedPlan(data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingPlan(false);
+    }
+  };
+
   return (
     <div className="px-4 md:px-10 max-w-[1280px] mx-auto py-8 page-enter space-y-8">
-      <div>
-        <h2 className="font-display text-[32px] font-bold text-on-surface tracking-tight mb-2">
-          Insights Detalhados
-        </h2>
-        <p className="text-on-surface-variant">
-          Análise completa da semana de saúde e fitness de {userName}.
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="font-display text-[32px] font-bold text-on-surface tracking-tight mb-2">
+            Insights Detalhados
+          </h2>
+          <p className="text-on-surface-variant">
+            Análise completa da semana de saúde e fitness de {userName}.
+          </p>
+        </div>
+        <button
+          onClick={handleSuggestMeals}
+          disabled={loadingPlan}
+          className="bg-primary-container text-white text-[13px] font-semibold px-5 py-3 rounded-xl flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md disabled:opacity-50"
+        >
+          {loadingPlan ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <>
+              <Sparkles size={14} />
+              Gerar Plano Alimentar
+            </>
+          )}
+        </button>
       </div>
 
       {/* ---- Weekly Calorie Chart ---- */}
@@ -121,6 +169,70 @@ export default function InsightsPage() {
           </span>
         </div>
       </div>
+
+      {/* ---- AI Meal Plan Suggestions Output ---- */}
+      {suggestedPlan && (
+        <div className="bg-white border border-outline-variant/30 rounded-xl p-6 space-y-6 page-enter shadow-sm">
+          <div>
+            <h3 className="font-display text-lg font-bold text-primary flex items-center gap-2">
+              <Sparkles size={18} className="text-ai-indigo" fill="currentColor" />
+              Sugestão de Menu Diário (IA)
+            </h3>
+            <p className="text-on-surface-variant text-xs mt-1">
+              Plano de {userName} calibrado para o alvo de {caloriesGoal} kcal e restrições alimentares.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {suggestedPlan.meals.map((meal: any, idx: number) => (
+              <div key={idx} className="p-4 border rounded-xl space-y-3 bg-surface-container-lowest">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-ai-indigo bg-ai-indigo/5 px-2.5 py-1 rounded-full">
+                    {meal.type}
+                  </span>
+                  <span className="text-xs font-semibold text-primary">
+                    {meal.totalCalories} kcal
+                  </span>
+                </div>
+                <h4 className="font-display font-semibold text-on-surface text-[15px]">
+                  {meal.title}
+                </h4>
+                <div className="space-y-1">
+                  {meal.items.map((item: any, i: number) => (
+                    <div key={i} className="flex justify-between text-xs text-on-surface-variant border-b border-surface-container/50 py-1 last:border-0">
+                      <span>{item.name} ({item.quantity})</span>
+                      <span className="font-semibold text-on-surface">P: {item.protein}g | C: {item.carbs}g | G: {item.fat}g</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-on-surface-variant leading-4 italic pt-1 border-t border-dashed">
+                  <strong>Preparo:</strong> {meal.instructions}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Aggregate Totals */}
+          <div className="bg-ai-indigo/5 border border-ai-indigo/10 rounded-xl p-4 flex flex-wrap justify-around text-center gap-3">
+            <div>
+              <p className="text-[10px] font-semibold text-ai-indigo tracking-wider uppercase">Calorias Totais</p>
+              <p className="font-display text-xl font-bold text-on-surface">{suggestedPlan.aggregateCalories} kcal</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-ai-indigo tracking-wider uppercase">Proteínas</p>
+              <p className="font-display text-xl font-bold text-on-surface">{suggestedPlan.aggregateProtein}g</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-ai-indigo tracking-wider uppercase">Carbohidratos</p>
+              <p className="font-display text-xl font-bold text-on-surface">{suggestedPlan.aggregateCarbs}g</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-ai-indigo tracking-wider uppercase">Gorduras</p>
+              <p className="font-display text-xl font-bold text-on-surface">{suggestedPlan.aggregateFat}g</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---- AI Insights List ---- */}
       <div className="space-y-4">
