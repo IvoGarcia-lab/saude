@@ -1083,7 +1083,7 @@ export default function CalendarPage() {
 
               // Calorie percentage calculation
               let dayMealsKcal = 0;
-              dayEvents.filter(e => e.type === 'meal').forEach(m => {
+              dayEvents.filter(e => e.type === 'meal' && e.completed).forEach(m => {
                 const kcalMatch = m.title.match(/(\d+)\s*kcal/) || (m.description && m.description.match(/(\d+)\s*kcal/));
                 dayMealsKcal += kcalMatch ? parseInt(kcalMatch[1]) : 400;
               });
@@ -1127,7 +1127,7 @@ export default function CalendarPage() {
                 >
                   <div className="flex justify-between items-center w-full">
                     <span className="text-[12px] font-bold text-on-surface">{day}</span>
-                    {calPercent > 0 && (
+                    {dayEvents.some(e => e.type === 'meal') && (
                       <span className={cn(
                         "text-[9px] px-1 py-0.25 rounded-full font-bold",
                         calPercent >= 90 && calPercent <= 110 
