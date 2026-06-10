@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Hanken_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { EventsProvider } from "@/contexts/EventsContext";
 import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";
 
@@ -38,11 +39,13 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-surface-ice text-on-surface font-body">
         <AuthProvider>
-          <TopBar />
-          <main className="flex-1 pt-16 pb-24">
-            {children}
-          </main>
-          <BottomNav />
+          <EventsProvider>
+            <TopBar />
+            <main className="flex-1 pt-16 pb-24">
+              {children}
+            </main>
+            <BottomNav />
+          </EventsProvider>
         </AuthProvider>
       </body>
     </html>

@@ -8,10 +8,13 @@ import { mockMeals } from '@/lib/mock-data';
 import type { NutritionAnalysis, Meal } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+import { useEvents } from '@/contexts/EventsContext';
+
 type DiaryState = 'upload' | 'analyzing' | 'result' | 'history';
 
 export default function DiaryPage() {
   const { profile, user: firebaseUser, isDemo } = useAuth();
+  const { addEvent } = useEvents();
   const [state, setState] = useState<DiaryState>('upload');
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -198,23 +201,19 @@ export default function DiaryPage() {
     const mealTypeLabel = mealType === 'breakfast' ? 'Pequeno-almoço' : mealType === 'lunch' ? 'Almoço' : mealType === 'dinner' ? 'Jantar' : 'Snack';
 
     const calendarEvent = {
-      userId: firebaseUser?.uid || 'demo-user-001',
       title: `${mealTypeEmoji} ${mealTypeLabel} (${analysis.calories} kcal)`,
-      type: 'meal',
+      type: 'meal' as const,
       dateStr,
       timeStr,
       description: `Alimentos: ${analysis.foods.map(f => `${f.name} (${f.quantity})`).join(', ')}. Proteína: ${analysis.protein}g, Hidratos: ${analysis.carbs}g, Gordura: ${analysis.fat}g.`,
-      createdAt: new Date(),
+      completed: true,
     };
 
-    if (isDemo || !firebaseUser) {
-      // Save to local storage events
-      const local = localStorage.getItem('demo_events');
-      const currentEvents = local ? JSON.parse(local) : [];
-      const updatedEvents = [...currentEvents, calendarEvent];
-      localStorage.setItem('demo_events', JSON.stringify(updatedEvents));
+    // Save event via shared context (handles both local storage and firebase events collections)
+    await addEvent(calendarEvent);
 
-      // Save to local storage meals
+    if (isDemo || !firebaseUser) {
+      // Save to local storage meals only (events handled above)
       const localMeals = localStorage.getItem('demo_meals');
       const currentMeals = localMeals ? JSON.parse(localMeals) : [];
       const updatedMeals = [newMeal, ...currentMeals];
@@ -225,12 +224,10 @@ export default function DiaryPage() {
         const { collection, addDoc } = await import('firebase/firestore');
         const db = getFirebaseDb();
         
-        // Save to meals collection
+        // Save to meals collection (events handled above)
         await addDoc(collection(db, 'meals'), newMeal);
-        // Save to events collection
-        await addDoc(collection(db, 'events'), calendarEvent);
       } catch (err) {
-        console.error('Erro ao guardar refeição/evento no Firebase:', err);
+        console.error('Erro ao guardar refeição no Firebase:', err);
       }
     }
 

@@ -7,18 +7,11 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { mockDailySummary, mockMeals } from '@/lib/mock-data';
 import { cn, calculateBMR, calculateTDEE, calculateMacros } from '@/lib/utils';
 
-interface CalendarEvent {
-  id?: string;
-  title: string;
-  type: 'workout' | 'meal' | 'assessment' | 'rest';
-  dateStr: string;
-  timeStr: string;
-  description?: string;
-}
+import { useEvents, type CalendarEvent } from '@/contexts/EventsContext';
 
 export default function InsightsPage() {
   const { profile, user: firebaseUser, isDemo } = useAuth();
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const { events, addEvents } = useEvents();
   const [loading, setLoading] = useState(false);
   const [loggedMeals, setLoggedMeals] = useState<any[]>([]);
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
@@ -133,23 +126,7 @@ export default function InsightsPage() {
         });
       }
 
-      if (isDemo || !firebaseUser) {
-        const updated = [...events, ...newEvents];
-        setEvents(updated);
-        localStorage.setItem('demo_events', JSON.stringify(updated));
-      } else {
-        const { getFirebaseDb } = await import('@/lib/firebase');
-        const { collection, addDoc } = await import('firebase/firestore');
-        const db = getFirebaseDb();
-        for (const ev of newEvents) {
-          await addDoc(collection(db, 'events'), {
-            ...ev,
-            userId: firebaseUser.uid,
-            createdAt: new Date(),
-          });
-        }
-        await fetchEvents();
-      }
+      await addEvents(newEvents);
     } catch (err) {
       console.error('Erro ao propor plano por IA:', err);
     } finally {
@@ -162,61 +139,7 @@ export default function InsightsPage() {
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
-  // Fetch events
-  const fetchEvents = useCallback(async () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-    const formatDateString = (y: number, m: number, d: number) => {
-      const mm = String(m + 1).padStart(2, '0');
-      const dd = String(d).padStart(2, '0');
-      return `${y}-${mm}-${dd}`;
-    };
-
-    if (isDemo || !firebaseUser) {
-      const local = localStorage.getItem('demo_events');
-      if (local) {
-        setEvents(JSON.parse(local));
-      } else {
-        const defaultEvents: CalendarEvent[] = [
-          { title: 'Treino de Pernas', type: 'workout', dateStr: formatDateString(year, month, 12), timeStr: '08:30', description: 'Foco em quadríceps' },
-          { title: 'Consulta Nutricional', type: 'assessment', dateStr: formatDateString(year, month, 15), timeStr: '14:00', description: 'Medição de bioimpedância' },
-          { title: 'Preparação de Marmitas', type: 'meal', dateStr: formatDateString(year, month, 16), timeStr: '19:00', description: 'Marmitas para a semana inteira' },
-        ];
-        setEvents(defaultEvents);
-        localStorage.setItem('demo_events', JSON.stringify(defaultEvents));
-      }
-      return;
-    }
-    setLoading(true);
-    try {
-      const { getFirebaseDb } = await import('@/lib/firebase');
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const db = getFirebaseDb();
-      const q = query(
-        collection(db, 'events'),
-        where('userId', '==', firebaseUser.uid)
-      );
-      const snapshot = await getDocs(q);
-      const loaded: CalendarEvent[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        loaded.push({
-          id: doc.id,
-          title: data.title,
-          type: data.type,
-          dateStr: data.dateStr,
-          timeStr: data.timeStr,
-          description: data.description || '',
-        });
-      });
-      setEvents(loaded);
-    } catch (err) {
-      console.error('Erro ao carregar eventos:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [firebaseUser, isDemo]);
+  // Context events are used directly, no local fetchEvents needed
 
   // Fetch logged meals
   const fetchLoggedMeals = useCallback(async () => {
@@ -259,9 +182,8 @@ export default function InsightsPage() {
   }, [firebaseUser, isDemo]);
 
   useEffect(() => {
-    fetchEvents();
     fetchLoggedMeals();
-  }, [fetchEvents, fetchLoggedMeals]);
+  }, [fetchLoggedMeals]);
 
   const fatigueData = useMemo(() => {
     const list: {

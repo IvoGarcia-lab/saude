@@ -3,26 +3,16 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Calendar as CalendarIcon, Clock, Plus, Trash2, Sparkles, Loader2, ChevronLeft, ChevronRight, Check, X, BookOpen, Utensils } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { useEvents, type CalendarEvent } from '@/contexts/EventsContext';
 import { CoachInsight } from '@/components/dashboard/CoachInsight';
 import { cn, calculateBMR, calculateTDEE, calculateMacros } from '@/lib/utils';
 import { mockMeals } from '@/lib/mock-data';
 import type { Meal } from '@/lib/types';
 
-interface CalendarEvent {
-  id?: string;
-  title: string;
-  type: 'workout' | 'meal' | 'water' | 'assessment' | 'rest';
-  dateStr: string; // YYYY-MM-DD
-  timeStr: string; // HH:MM
-  description?: string;
-  completed?: boolean;
-}
-
 export default function CalendarPage() {
   const { profile, user: firebaseUser, isDemo } = useAuth();
+  const { events, addEvent, addEvents, deleteEvent, toggleEventCompleted, loading } = useEvents();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(false);
   const [loggedMeals, setLoggedMeals] = useState<Meal[]>([]);
 
   // Active selected cell date in calendar (defaults to today)
@@ -315,33 +305,14 @@ export default function CalendarPage() {
 
   const handleScheduleRecipe = async (recipe: typeof recipes[0]) => {
     setSavingEvent(true);
-    const newEvent: CalendarEvent = {
+    await addEvent({
       title: `🥗 Receita: ${recipe.title}`,
       type: 'meal',
       dateStr: activeDateStr,
       timeStr: recipe.category === 'Pequeno-almoço' ? '08:30' : recipe.category === 'Snack / Lanche' ? '17:00' : '13:30',
       description: `Ingredientes: ${recipe.ingredients}\nMacros: ${recipe.calories} kcal, ${recipe.protein}g Prot, ${recipe.carbs}g H.C., ${recipe.fat}g Gord.\nPrep: ${recipe.prep}`,
-    };
-
-    if (isDemo || !firebaseUser) {
-      const updated = [...events, newEvent];
-      setEvents(updated);
-      localStorage.setItem('demo_events', JSON.stringify(updated));
-    } else {
-      try {
-        const { getFirebaseDb } = await import('@/lib/firebase');
-        const { collection, addDoc } = await import('firebase/firestore');
-        const db = getFirebaseDb();
-        await addDoc(collection(db, 'events'), {
-          ...newEvent,
-          userId: firebaseUser.uid,
-          createdAt: new Date(),
-        });
-        await fetchEvents();
-      } catch (err) {
-        console.error('Erro ao salvar receita no calendário:', err);
-      }
-    }
+      completed: false,
+    });
     setSavingEvent(false);
   };
 
@@ -419,53 +390,7 @@ export default function CalendarPage() {
     return `${y}-${mm}-${dd}`;
   };
 
-  // 1. Fetch user's events from Firestore or LocalStorage fallback
-  const fetchEvents = useCallback(async () => {
-    if (isDemo || !firebaseUser) {
-      // LocalStorage fallback for demo mode
-      const local = localStorage.getItem('demo_events');
-      if (local) {
-        setEvents(JSON.parse(local));
-      } else {
-        const defaultEvents: CalendarEvent[] = [
-          { title: 'Treino de Pernas', type: 'workout', dateStr: formatDateString(year, month, 12), timeStr: '08:30', description: 'Foco em quadríceps' },
-          { title: 'Consulta Nutricional', type: 'assessment', dateStr: formatDateString(year, month, 15), timeStr: '14:00', description: 'Medição de bioimpedância' },
-          { title: 'Preparação de Marmitas', type: 'meal', dateStr: formatDateString(year, month, 16), timeStr: '19:00', description: 'Marmitas para a semana inteira' },
-        ];
-        setEvents(defaultEvents);
-        localStorage.setItem('demo_events', JSON.stringify(defaultEvents));
-      }
-      return;
-    }
-    setLoading(true);
-    try {
-      const { getFirebaseDb } = await import('@/lib/firebase');
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const db = getFirebaseDb();
-      const q = query(
-        collection(db, 'events'),
-        where('userId', '==', firebaseUser.uid)
-      );
-      const snapshot = await getDocs(q);
-      const loaded: CalendarEvent[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        loaded.push({
-          id: doc.id,
-          title: data.title,
-          type: data.type,
-          dateStr: data.dateStr,
-          timeStr: data.timeStr,
-          description: data.description || '',
-        });
-      });
-      setEvents(loaded);
-    } catch (err) {
-      console.error('Erro ao carregar eventos:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [firebaseUser, isDemo, year, month]);
+  // Events are loaded by the shared EventsContext — no local fetchEvents needed
 
   const fetchLoggedMeals = useCallback(async () => {
     if (isDemo || !firebaseUser) {
@@ -507,9 +432,8 @@ export default function CalendarPage() {
   }, [firebaseUser, isDemo]);
 
   useEffect(() => {
-    fetchEvents();
     fetchLoggedMeals();
-  }, [fetchEvents, fetchLoggedMeals]);
+  }, [fetchLoggedMeals]);
 
   // 2. Add Event
   const handleAddEvent = async (e: React.FormEvent) => {
@@ -517,33 +441,14 @@ export default function CalendarPage() {
     if (!title || !selectedDate) return;
 
     setSavingEvent(true);
-    const newEvent: CalendarEvent = {
+    await addEvent({
       title,
       type,
       dateStr: selectedDate,
       timeStr: time,
       description,
-    };
-
-    if (isDemo || !firebaseUser) {
-      const updated = [...events, newEvent];
-      setEvents(updated);
-      localStorage.setItem('demo_events', JSON.stringify(updated));
-    } else {
-      try {
-        const { getFirebaseDb } = await import('@/lib/firebase');
-        const { collection, addDoc } = await import('firebase/firestore');
-        const db = getFirebaseDb();
-        await addDoc(collection(db, 'events'), {
-          ...newEvent,
-          userId: firebaseUser.uid,
-          createdAt: new Date(),
-        });
-        await fetchEvents();
-      } catch (err) {
-        console.error('Erro ao salvar evento:', err);
-      }
-    }
+      completed: false,
+    });
 
     // Reset Form
     setTitle('');
@@ -557,23 +462,12 @@ export default function CalendarPage() {
 
   // 3. Delete Event
   const handleDeleteEvent = async (eventId?: string, localIndex?: number) => {
-    if (isDemo || !firebaseUser) {
-      const updated = events.filter((_, idx) => idx !== localIndex);
-      setEvents(updated);
-      localStorage.setItem('demo_events', JSON.stringify(updated));
-      return;
-    }
+    await deleteEvent(eventId, localIndex);
+  };
 
-    if (!eventId) return;
-    try {
-      const { getFirebaseDb } = await import('@/lib/firebase');
-      const { doc, deleteDoc } = await import('firebase/firestore');
-      const db = getFirebaseDb();
-      await deleteDoc(doc(db, 'events', eventId));
-      await fetchEvents();
-    } catch (err) {
-      console.error('Erro ao apagar evento:', err);
-    }
+  // 4. Toggle Event Completed (delegates to shared context)
+  const handleToggleEventCompleted = (event: CalendarEvent, localIndex: number) => {
+    toggleEventCompleted(event, localIndex);
   };
 
   // 4. Trigger AI Calendar Analysis
@@ -729,6 +623,7 @@ export default function CalendarPage() {
         });
 
         newEvents.push({
+          id: `proposed-meal-${meal.type}-${Date.now()}-${Math.random()}`,
           title: `${mealTypeEmoji} Proposto: ${meal.title} (${scaledCalories} kcal)`,
           type: 'meal',
           dateStr: targetDateStr,
@@ -740,8 +635,9 @@ export default function CalendarPage() {
 
       // Propose water automatically (4 events of 500ml = 2.0L total)
       const waterTimes = ['09:00', '12:00', '15:00', '18:00'];
-      waterTimes.forEach(time => {
+      waterTimes.forEach((time, index) => {
         newEvents.push({
+          id: `proposed-water-${index}-${Date.now()}-${Math.random()}`,
           title: '💧 Água: 500 ml',
           type: 'water',
           dateStr: targetDateStr,
@@ -753,6 +649,7 @@ export default function CalendarPage() {
 
       if (workoutData.success && workoutData.data?.workout) {
         newEvents.push({
+          id: `proposed-workout-${Date.now()}-${Math.random()}`,
           title: `🏋️ Proposto: Treino ${workoutData.data.workout.name || 'Personalizado'}`,
           type: 'workout',
           dateStr: targetDateStr,
@@ -762,24 +659,8 @@ export default function CalendarPage() {
         });
       }
 
-      // Save all proposed events
-      if (isDemo || !firebaseUser) {
-        const updated = [...events, ...newEvents];
-        setEvents(updated);
-        localStorage.setItem('demo_events', JSON.stringify(updated));
-      } else {
-        const { getFirebaseDb } = await import('@/lib/firebase');
-        const { collection, addDoc } = await import('firebase/firestore');
-        const db = getFirebaseDb();
-        for (const ev of newEvents) {
-          await addDoc(collection(db, 'events'), {
-            ...ev,
-            userId: firebaseUser.uid,
-            createdAt: new Date(),
-          });
-        }
-        await fetchEvents();
-      }
+      // Save all proposed events via shared context
+      await addEvents(newEvents);
     } catch (err) {
       console.error('Erro ao propor plano por IA:', err);
     } finally {
@@ -787,35 +668,7 @@ export default function CalendarPage() {
     }
   };
 
-  const handleToggleEventCompleted = async (event: CalendarEvent, localIndex: number) => {
-    const updatedCompleted = !event.completed;
-    
-    // Update local state
-    const updatedEvents = events.map((e, idx) => {
-      if (idx === localIndex || (e.id && e.id === event.id)) {
-        return { ...e, completed: updatedCompleted };
-      }
-      return e;
-    });
-    setEvents(updatedEvents);
 
-    if (isDemo || !firebaseUser) {
-      localStorage.setItem('demo_events', JSON.stringify(updatedEvents));
-    } else {
-      try {
-        const { getFirebaseDb } = await import('@/lib/firebase');
-        const { doc, updateDoc } = await import('firebase/firestore');
-        const db = getFirebaseDb();
-        if (event.id) {
-          await updateDoc(doc(db, 'events', event.id), {
-            completed: updatedCompleted,
-          });
-        }
-      } catch (err) {
-        console.error('Erro ao atualizar estado do evento:', err);
-      }
-    }
-  };
 
   const getScaledGalleryMeal = useCallback((meal: Meal) => {
     // Detect category to get target
