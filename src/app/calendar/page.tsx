@@ -15,6 +15,7 @@ interface CalendarEvent {
   dateStr: string; // YYYY-MM-DD
   timeStr: string; // HH:MM
   description?: string;
+  completed?: boolean;
 }
 
 export default function CalendarPage() {
