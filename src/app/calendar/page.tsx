@@ -354,6 +354,44 @@ export default function CalendarPage() {
   const [recipeSearch, setRecipeSearch] = useState('');
   const [mealTab, setMealTab] = useState<'recipes' | 'gallery'>('recipes');
 
+  const dailyCalorieTarget = useMemo(() => {
+    if (!profile) return 2000;
+    const bmr = calculateBMR(profile.weight, profile.height, profile.age);
+    const tdee = calculateTDEE(bmr);
+    const goal = profile.goal || 'maintain';
+    if (goal === 'lose') return Math.max(1200, Math.round(tdee - 500));
+    if (goal === 'gain') return Math.round(tdee + 300);
+    return Math.round(tdee);
+  }, [profile]);
+
+  const getMealTargetKcal = (category: string, totalGoal: number) => {
+    const cat = category.toLowerCase();
+    if (cat.includes('pequeno') || cat.includes('pequeno-almoço')) return Math.round(totalGoal * 0.25);
+    if (cat.includes('almoço') || cat.includes('jantar')) return Math.round(totalGoal * 0.35);
+    return Math.round(totalGoal * 0.10); // Snack / Lanche
+  };
+
+  const getScaledRecipe = useCallback((recipe: typeof recipes[0]) => {
+    const targetKcal = getMealTargetKcal(recipe.category, dailyCalorieTarget);
+    const scale = targetKcal / recipe.calories;
+    
+    // Scale ingredients weights (e.g. 50g -> 75g)
+    const scaledIngredients = recipe.ingredients.replace(/(\d+)\s*(g|ml|scoop)/g, (match, num, unit) => {
+      const scaledNum = Math.round(parseFloat(num) * scale);
+      return `${scaledNum} ${unit}`;
+    });
+
+    return {
+      ...recipe,
+      calories: targetKcal,
+      protein: Math.round(recipe.protein * scale),
+      carbs: Math.round(recipe.carbs * scale),
+      fat: Math.round(recipe.fat * scale),
+      ingredients: scaledIngredients,
+      scaleFactor: scale,
+    };
+  }, [dailyCalorieTarget]);
+
   // AI Analysis State
   const [aiLoading, setAiLoading] = useState(false);
   const [aiReport, setAiReport] = useState<{
@@ -595,12 +633,29 @@ export default function CalendarPage() {
         mealsData.data.meals.forEach((meal: any) => {
           const mealTypeEmoji = meal.type === 'pequeno-almoço' ? '🌅' : meal.type === 'almoço' ? '🍽️' : meal.type === 'jantar' ? '🌙' : '🍎';
           const time = meal.type === 'pequeno-almoço' ? '08:00' : meal.type === 'almoço' ? '13:00' : meal.type === 'jantar' ? '20:00' : '17:00';
+          
+          // Automatically scale proposed meals to the user's daily budget targets
+          const targetKcal = getMealTargetKcal(meal.type, dailyCalorieTarget);
+          const scale = targetKcal / meal.totalCalories;
+          const scaledCalories = targetKcal;
+          const scaledProtein = Math.round(meal.totalProtein * scale);
+          const scaledCarbs = Math.round(meal.totalCarbs * scale);
+          const scaledFat = Math.round(meal.totalFat * scale);
+          const scaledItems = meal.items.map((item: any) => {
+            const quantityStr = item.quantity || '';
+            const scaledQuantity = quantityStr.replace(/(\d+)\s*(g|ml|scoop)/g, (match: string, num: string, unit: string) => {
+              const scaledNum = Math.round(parseFloat(num) * scale);
+              return `${scaledNum} ${unit}`;
+            });
+            return { ...item, quantity: scaledQuantity };
+          });
+
           newEvents.push({
-            title: `${mealTypeEmoji} Proposto: ${meal.title} (${meal.totalCalories} kcal)`,
+            title: `${mealTypeEmoji} Proposto: ${meal.title} (${scaledCalories} kcal)`,
             type: 'meal',
             dateStr: targetDateStr,
             timeStr: time,
-            description: `Alimentos: ${meal.items.map((i: any) => `${i.name} (${i.quantity})`).join(', ')}.\nPrep: ${meal.instructions}`,
+            description: `Alimentos: ${scaledItems.map((i: any) => `${i.name} (${i.quantity})`).join(', ')}.\nMacros: ${scaledCalories} kcal, P: ${scaledProtein}g, C: ${scaledCarbs}g, G: ${scaledFat}g\nPrep: ${meal.instructions}`,
           });
         });
       }
@@ -639,6 +694,34 @@ export default function CalendarPage() {
       setProposingPlan(false);
     }
   };
+
+  const getScaledGalleryMeal = useCallback((meal: Meal) => {
+    // Detect category to get target
+    const targetKcal = getMealTargetKcal(
+      meal.mealType === 'breakfast' ? 'Pequeno-almoço' : meal.mealType === 'lunch' || meal.mealType === 'dinner' ? 'Almoço / Jantar' : 'Snack / Lanche',
+      dailyCalorieTarget
+    );
+    const scale = targetKcal / (meal.calories || 400);
+
+    // Scale foods quantity
+    const scaledFoods = meal.foods.map((food) => {
+      const quantityStr = food.quantity;
+      const scaledQuantity = quantityStr.replace(/(\d+)\s*(g|ml|scoop)/g, (match, num, unit) => {
+        const scaledNum = Math.round(parseFloat(num) * scale);
+        return `${scaledNum} ${unit}`;
+      });
+      return { ...food, quantity: scaledQuantity };
+    });
+
+    return {
+      ...meal,
+      calories: targetKcal,
+      protein: Math.round(meal.protein * scale),
+      carbs: Math.round(meal.carbs * scale),
+      fat: Math.round(meal.fat * scale),
+      foods: scaledFoods,
+    };
+  }, [dailyCalorieTarget]);
 
   const handleAnalyzeCalendar = async () => {
     setAiLoading(true);
@@ -827,7 +910,11 @@ export default function CalendarPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowAddForm(true)}
+          onClick={() => {
+            setSelectedDate(activeDateStr);
+            setType('meal');
+            setShowAddForm(true);
+          }}
           className="bg-primary-container text-white text-[13px] font-semibold px-5 py-3 rounded-xl flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md"
         >
           <Plus size={18} />
@@ -878,6 +965,8 @@ export default function CalendarPage() {
                   onClick={() => {
                     setActiveDateStr(dateStr);
                     setSelectedDate(dateStr);
+                    setType('meal');
+                    setShowAddForm(true);
                   }}
                   className={cn(
                     "aspect-square border rounded-lg p-1.5 flex flex-col justify-between cursor-pointer transition-all",
@@ -922,6 +1011,7 @@ export default function CalendarPage() {
               <button
                 onClick={() => {
                   setSelectedDate(activeDateStr);
+                  setType('meal');
                   setShowAddForm(true);
                 }}
                 className="text-[12px] text-primary font-bold hover:underline flex items-center gap-1"
@@ -988,12 +1078,8 @@ export default function CalendarPage() {
               </div>
             )}
           </div>
-
-
         </div>
       </div>
-
-
 
       {/* ---- Add Event Dialog Modal ---- */}
       {showAddForm && (
@@ -1121,22 +1207,25 @@ export default function CalendarPage() {
                       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                         {filteredRecipes
                           .filter(r => r.title.toLowerCase().includes(recipeSearch.toLowerCase()))
-                          .map((recipe, idx) => (
-                            <div
-                              key={idx}
-                              className="p-3 border border-outline-variant/20 rounded-xl space-y-1 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer"
-                              onClick={() => {
-                                setTitle(`🥗 Receita: ${recipe.title}`);
-                                setDescription(`Ingredientes: ${recipe.ingredients}\nMacros: ${recipe.calories} kcal, P: ${recipe.protein}g, C: ${recipe.carbs}g, G: ${recipe.fat}g\nPreparo: ${recipe.prep}`);
-                              }}
-                            >
-                              <div className="flex justify-between items-start">
-                                <p className="font-semibold text-on-surface text-xs leading-5">{recipe.title}</p>
-                                <span className="text-[10px] bg-primary/5 text-primary px-1.5 py-0.5 rounded font-bold shrink-0">{recipe.calories} kcal</span>
+                          .map((recipe, idx) => {
+                            const scaled = getScaledRecipe(recipe);
+                            return (
+                              <div
+                                key={idx}
+                                className="p-3 border border-outline-variant/20 rounded-xl space-y-1 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer"
+                                onClick={() => {
+                                  setTitle(`🥗 Receita: ${scaled.title}`);
+                                  setDescription(`Ingredientes: ${scaled.ingredients}\nMacros: ${scaled.calories} kcal, P: ${scaled.protein}g, C: ${scaled.carbs}g, G: ${scaled.fat}g\nPreparo: ${scaled.prep}`);
+                                }}
+                              >
+                                <div className="flex justify-between items-start">
+                                  <p className="font-semibold text-on-surface text-xs leading-5">{scaled.title}</p>
+                                  <span className="text-[10px] bg-primary/5 text-primary px-1.5 py-0.5 rounded font-bold shrink-0">{scaled.calories} kcal</span>
+                                </div>
+                                <p className="text-[10px] text-on-surface-variant font-medium">{scaled.category} • Prep: {scaled.time}</p>
                               </div>
-                              <p className="text-[10px] text-on-surface-variant font-medium">{recipe.category} • Prep: {recipe.time}</p>
-                            </div>
-                          ))}
+                            );
+                          })}
                       </div>
                     </div>
                   )}
@@ -1149,35 +1238,38 @@ export default function CalendarPage() {
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-3">
-                          {loggedMeals.map((meal, idx) => (
-                            <div
-                              key={meal.id || idx}
-                              className="border border-outline-variant/20 rounded-xl p-2 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer flex flex-col gap-2"
-                              onClick={() => {
-                                const mealTypeLabel = meal.mealType === 'breakfast' ? 'Pequeno-almoço' : meal.mealType === 'lunch' ? 'Almoço' : meal.mealType === 'dinner' ? 'Jantar' : 'Snack';
-                                setTitle(`🍽️ Galeria: ${mealTypeLabel} (${meal.calories} kcal)`);
-                                setDescription(`Alimentos: ${meal.foods.map((f: any) => `${f.name} (${f.quantity})`).join(', ')}.\nProteína: ${meal.protein}g, Hidratos: ${meal.carbs}g, Gordura: ${meal.fat}g.`);
-                              }}
-                            >
-                              {meal.imageUrl ? (
-                                <img
-                                  src={meal.imageUrl}
-                                  alt="Refeição"
-                                  className="w-full h-24 object-cover rounded-lg"
-                                />
-                              ) : (
-                                <div className="w-full h-24 bg-surface-container-low flex items-center justify-center rounded-lg text-on-surface-variant">
-                                  <Utensils size={24} />
+                          {loggedMeals.map((meal, idx) => {
+                            const scaled = getScaledGalleryMeal(meal);
+                            return (
+                              <div
+                                key={meal.id || idx}
+                                className="border border-outline-variant/20 rounded-xl p-2 bg-surface-container-lowest hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer flex flex-col gap-2"
+                                onClick={() => {
+                                  const mealTypeLabel = meal.mealType === 'breakfast' ? 'Pequeno-almoço' : meal.mealType === 'lunch' ? 'Almoço' : meal.mealType === 'dinner' ? 'Jantar' : 'Snack';
+                                  setTitle(`🍽️ Galeria: ${mealTypeLabel} (${scaled.calories} kcal)`);
+                                  setDescription(`Alimentos: ${scaled.foods.map((f: any) => `${f.name} (${f.quantity})`).join(', ')}.\nProteína: ${scaled.protein}g, Hidratos: ${scaled.carbs}g, Gordura: ${scaled.fat}g.`);
+                                }}
+                              >
+                                {meal.imageUrl ? (
+                                  <img
+                                    src={meal.imageUrl}
+                                    alt="Refeição"
+                                    className="w-full h-24 object-cover rounded-lg"
+                                  />
+                                ) : (
+                                  <div className="w-full h-24 bg-surface-container-low flex items-center justify-center rounded-lg text-on-surface-variant">
+                                    <Utensils size={24} />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-bold text-[11px] text-on-surface capitalize leading-tight">
+                                    {meal.mealType === 'breakfast' ? '🌅 P. Almoço' : meal.mealType === 'lunch' ? '🍽️ Almoço' : meal.mealType === 'dinner' ? '🌙 Jantar' : '🍎 Snack'}
+                                  </p>
+                                  <p className="text-[10px] text-primary font-bold mt-0.5">{scaled.calories} kcal</p>
                                 </div>
-                              )}
-                              <div>
-                                <p className="font-bold text-[11px] text-on-surface capitalize leading-tight">
-                                  {meal.mealType === 'breakfast' ? '🌅 P. Almoço' : meal.mealType === 'lunch' ? '🍽️ Almoço' : meal.mealType === 'dinner' ? '🌙 Jantar' : '🍎 Snack'}
-                                </p>
-                                <p className="text-[10px] text-primary font-bold mt-0.5">{meal.calories} kcal</p>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
