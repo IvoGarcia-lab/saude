@@ -1,6 +1,7 @@
 'use client';
 
-import { TrendingUp, TrendingDown, Minus, Heart, Footprints, Moon, Dumbbell, Utensils } from 'lucide-react';
+import { useState } from 'react';
+import { TrendingUp, TrendingDown, Minus, Heart, Footprints, Moon, Dumbbell, Utensils, Loader2, Sparkles } from 'lucide-react';
 import { CoachInsight } from '@/components/dashboard/CoachInsight';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { mockDailySummary, mockMeals } from '@/lib/mock-data';

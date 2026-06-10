@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Calendar as CalendarIcon, Clock, Plus, Trash2, Sparkles, Loader2, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Plus, Trash2, Sparkles, Loader2, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { CoachInsight } from '@/components/dashboard/CoachInsight';
 import { cn } from '@/lib/utils';
