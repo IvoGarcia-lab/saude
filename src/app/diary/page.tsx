@@ -20,6 +20,7 @@ export default function DiaryPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savedImageUrl, setSavedImageUrl] = useState('');
+  const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -464,10 +465,11 @@ export default function DiaryPage() {
               {meals.map((meal) => (
                 <div
                   key={meal.id}
-                  className="bg-white border border-outline-variant/30 rounded-xl p-4 flex items-center justify-between"
+                  onClick={() => setSelectedMeal(meal)}
+                  className="bg-white border border-outline-variant/30 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-primary/40 hover:bg-surface-container-lowest transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    {meal.imageUrl ? (
+                    {meal.imageUrl && !meal.imageUrl.startsWith('blob:') ? (
                       <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border">
                         <img src={meal.imageUrl} alt="Refeição" className="w-full h-full object-cover" />
                       </div>
@@ -499,7 +501,10 @@ export default function DiaryPage() {
                       <p className="text-xs text-on-surface-variant">kcal</p>
                     </div>
                     <button
-                      onClick={() => handleDeleteMeal(meal.id, meals.indexOf(meal))}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteMeal(meal.id, meals.indexOf(meal));
+                      }}
                       className="text-outline hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error/5"
                       title="Apagar Refeição"
                     >
@@ -518,6 +523,81 @@ export default function DiaryPage() {
             <Camera size={18} />
             Adicionar Outra Refeição
           </button>
+        </div>
+      )}
+
+      {/* ---- Meal Details Modal ---- */}
+      {selectedMeal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 page-enter relative">
+            <button
+              onClick={() => setSelectedMeal(null)}
+              className="absolute top-4 right-4 text-outline hover:text-on-surface p-1"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 pb-2 border-b">
+              <span className="text-2xl">
+                {selectedMeal.mealType === 'breakfast' ? '🌅' : selectedMeal.mealType === 'lunch' ? '🍽️' : selectedMeal.mealType === 'dinner' ? '🌙' : '🍎'}
+              </span>
+              <div>
+                <h3 className="font-display text-lg font-bold text-primary capitalize">
+                  {selectedMeal.mealType === 'breakfast' ? 'Pequeno-almoço' : selectedMeal.mealType === 'lunch' ? 'Almoço' : selectedMeal.mealType === 'dinner' ? 'Jantar' : 'Snack'}
+                </h3>
+                <p className="text-on-surface-variant text-xs font-semibold">
+                  {selectedMeal.date.toLocaleDateString('pt-PT')}
+                </p>
+              </div>
+            </div>
+
+            {selectedMeal.imageUrl && !selectedMeal.imageUrl.startsWith('blob:') ? (
+              <div className="rounded-xl overflow-hidden aspect-video w-full border">
+                <img src={selectedMeal.imageUrl} alt="Refeição" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="bg-primary/5 rounded-xl aspect-video w-full flex flex-col items-center justify-center gap-2 border border-dashed border-primary/20">
+                <Utensils size={36} className="text-primary" />
+                <p className="text-xs text-on-surface-variant font-semibold">Sem foto disponível</p>
+              </div>
+            )}
+
+            <div className="bg-surface-container-low p-4 rounded-xl space-y-2">
+              <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface-variant">Alimentos Registados</h4>
+              <div className="space-y-1">
+                {selectedMeal.foods.map((food, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-on-surface">{food.name}</span>
+                    <span className="text-on-surface-variant font-semibold">{food.quantity}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Macro Summary Grid */}
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: 'Calorias', value: `${selectedMeal.calories}`, unit: 'kcal', color: 'text-primary' },
+                { label: 'Proteína', value: `${selectedMeal.protein}`, unit: 'g', color: 'text-ai-indigo' },
+                { label: 'Carbos', value: `${selectedMeal.carbs}`, unit: 'g', color: 'text-alert-gold' },
+                { label: 'Gordura', value: `${selectedMeal.fat}`, unit: 'g', color: 'text-primary-container' },
+              ].map((m, i) => (
+                <div key={i} className="bg-white border border-outline-variant/30 rounded-xl p-2.5 text-center">
+                  <p className="text-[10px] font-bold text-on-surface-variant tracking-wider uppercase mb-0.5">{m.label}</p>
+                  <p className={cn('font-display text-lg font-light', m.color)}>
+                    {m.value}
+                    <span className="text-[10px] text-on-surface-variant ml-0.5">{m.unit}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {selectedMeal.feedback && (
+              <div className="pt-2">
+                <CoachInsight message={selectedMeal.feedback} />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
