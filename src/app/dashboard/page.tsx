@@ -5,11 +5,46 @@ import { Plus, TrendingUp, Footprints, Moon, Droplets, Wheat, Egg } from 'lucide
 import { CalorieRing } from '@/components/dashboard/CalorieRing';
 import { MacroCard } from '@/components/dashboard/MacroCard';
 import { CoachInsight } from '@/components/dashboard/CoachInsight';
-import { mockDailySummary, mockUser, mockCoachInsights } from '@/lib/mock-data';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { mockDailySummary, mockCoachInsights } from '@/lib/mock-data';
+import { calculateBMR, calculateTDEE, calculateMacros } from '@/lib/utils';
 
 export default function DashboardPage() {
-  const summary = mockDailySummary;
-  const user = mockUser;
+  const { profile } = useAuth();
+
+  // Dynamic calculations based on user profile
+  let caloriesGoal = mockDailySummary.caloriesGoal;
+  let proteinGoal = mockDailySummary.proteinGoal;
+  let carbsGoal = mockDailySummary.carbsGoal;
+  let fatGoal = mockDailySummary.fatGoal;
+  const userName = profile?.name ? profile.name.split(' ')[0] : 'Utilizador';
+
+  if (profile) {
+    const bmr = calculateBMR(profile.weight, profile.height, profile.age);
+    const tdee = calculateTDEE(bmr);
+
+    if (profile.goal === 'lose') {
+      caloriesGoal = Math.max(1200, tdee - 500);
+    } else if (profile.goal === 'gain') {
+      caloriesGoal = tdee + 300;
+    } else {
+      caloriesGoal = tdee;
+    }
+
+    const macros = calculateMacros(caloriesGoal, profile.goal);
+    proteinGoal = macros.protein;
+    carbsGoal = macros.carbs;
+    fatGoal = macros.fat;
+  }
+
+  const summary = {
+    ...mockDailySummary,
+    caloriesGoal,
+    proteinGoal,
+    carbsGoal,
+    fatGoal
+  };
+
   const insight = mockCoachInsights[0];
 
   return (
@@ -21,7 +56,7 @@ export default function DashboardPage() {
             Bem-vindo de volta
           </p>
           <h2 className="font-display text-[32px] md:text-[48px] font-bold leading-tight tracking-tight text-on-surface">
-            Olá, {user.name.split(' ')[0]}
+            Olá, {userName}
           </h2>
           <p className="text-on-surface-variant text-lg mt-1">
             Hoje é um ótimo dia para manter o foco na sua saúde.
