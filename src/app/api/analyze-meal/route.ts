@@ -27,16 +27,18 @@ export async function POST(request: Request) {
     }
 
     // Call OpenRouter API with Llama 3.2 Vision Free
-    let prompt = `Analyze this meal. Provide a structured JSON response containing:
+    let prompt = `Analise detalhadamente esta refeição na imagem. Identifique com precisão todos os alimentos visíveis.
+    Forneça uma resposta estritamente estruturada em JSON contendo:
     {
-      "foods": [{"name": "Food Item Name", "quantity": "Estimated Quantity"}],
-      "calories": number,
-      "protein": number (grams),
-      "carbs": number (grams),
-      "fat": number (grams),
-      "feedback": "A short, encouraging fitness coaching insight about this meal"
+      "foods": [{"name": "Nome do Alimento em Português", "quantity": "Quantidade Estimada (ex: 150g, 1 colher)"}],
+      "calories": número,
+      "protein": número (gramas de proteína),
+      "carbs": número (gramas de hidratos de carbono),
+      "fat": número (gramas de gordura),
+      "feedback": "Um comentário breve de coach desportivo sobre a refeição, escrito em Português de Portugal (pt-PT)"
     }
-    Respond ONLY with the raw JSON object. Do not include markdown code block formatting (like \`\`\`json) or any extra conversational text.`;
+    IMPORTANTE: Todos os textos em "name" e "feedback" DEVEM ser escritos em Português (pt-PT).
+    Responda APENAS com o objeto JSON puro. Não inclua blocos de código markdown (como \`\`\`json) ou qualquer outro texto explicativo.`;
 
     const contentArray: any[] = [{ type: 'text', text: text ? `${prompt}\nContext: ${text}` : prompt }];
 
