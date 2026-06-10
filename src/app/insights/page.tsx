@@ -23,6 +23,140 @@ export default function InsightsPage() {
   const [loggedMeals, setLoggedMeals] = useState<any[]>([]);
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
 
+  const [aiLoading, setAiLoading] = useState(false);
+  const [proposingPlan, setProposingPlan] = useState(false);
+  const [aiReport, setAiReport] = useState<{
+    progression: string;
+    projection: string;
+    state: string;
+    recommendation: string;
+  } | null>(null);
+
+  const handleAnalyzeCalendar = async () => {
+    setAiLoading(true);
+    setAiReport(null);
+    try {
+      const res = await fetch('/api/analyze-calendar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          events,
+          profile: profile || { goal: 'maintain', weight: 70, height: 170, age: 30, restrictions: [] },
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setAiReport(data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleProposePlan = async () => {
+    setProposingPlan(true);
+    try {
+      let calories = 2000;
+      let protein = 140;
+      let carbs = 200;
+      let fat = 65;
+      
+      if (profile) {
+        const bmr = calculateBMR(profile.weight, profile.height, profile.age);
+        const tdee = calculateTDEE(bmr);
+        calories = Math.round(
+          profile.goal === 'lose' ? tdee - 500 : profile.goal === 'gain' ? tdee + 500 : tdee
+        );
+        const macros = calculateMacros(calories, profile.goal || 'maintain');
+        protein = Math.round(macros.protein);
+        carbs = Math.round(macros.carbs);
+        fat = Math.round(macros.fat);
+      }
+
+      const mealsRes = await fetch('/api/suggest-meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caloriesGoal: calories,
+          proteinGoal: protein,
+          carbsGoal: carbs,
+          fatGoal: fat,
+          restrictions: profile?.restrictions || [],
+        }),
+      });
+      const mealsData = await mealsRes.json();
+      
+      const workoutRes = await fetch('/api/generate-workout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goal: profile?.goal || 'maintain',
+          experience: 'intermediate',
+          schedule: '3x',
+          restrictions: profile?.restrictions || [],
+          medication: profile?.medication || '',
+        }),
+      });
+      const workoutData = await workoutRes.json();
+
+      const today = new Date();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const targetDateStr = `${today.getFullYear()}-${mm}-${dd}`;
+      const newEvents: CalendarEvent[] = [];
+
+      if (mealsData.success && mealsData.data?.meals) {
+        mealsData.data.meals.forEach((meal: any) => {
+          const mealTypeEmoji = meal.type === 'pequeno-almoço' ? '🌅' : meal.type === 'almoço' ? '🍽️' : meal.type === 'jantar' ? '🌙' : '🍎';
+          const time = meal.type === 'pequeno-almoço' ? '08:00' : meal.type === 'almoço' ? '13:00' : meal.type === 'jantar' ? '20:00' : '17:00';
+          newEvents.push({
+            title: `${mealTypeEmoji} Proposto: ${meal.title} (${meal.totalCalories} kcal)`,
+            type: 'meal',
+            dateStr: targetDateStr,
+            timeStr: time,
+            description: `Alimentos: ${meal.items.map((i: any) => `${i.name} (${i.quantity})`).join(', ')}.\nPrep: ${meal.instructions}`,
+          });
+        });
+      }
+
+      if (workoutData.success && workoutData.data?.workout) {
+        newEvents.push({
+          title: `🏋️ Proposto: Treino ${workoutData.data.workout.name || 'Personalizado'}`,
+          type: 'workout',
+          dateStr: targetDateStr,
+          timeStr: '18:30',
+          description: `Exercícios:\n${workoutData.data.workout.exercises.map((e: any) => `- ${e.name}: ${e.sets} séries x ${e.reps} (${e.rest} rest)`).join('\n')}`,
+        });
+      }
+
+      if (isDemo || !firebaseUser) {
+        const updated = [...events, ...newEvents];
+        setEvents(updated);
+        localStorage.setItem('demo_events', JSON.stringify(updated));
+      } else {
+        const { getFirebaseDb } = await import('@/lib/firebase');
+        const { collection, addDoc } = await import('firebase/firestore');
+        const db = getFirebaseDb();
+        for (const ev of newEvents) {
+          await addDoc(collection(db, 'events'), {
+            ...ev,
+            userId: firebaseUser.uid,
+            createdAt: new Date(),
+          });
+        }
+        await fetchEvents();
+      }
+    } catch (err) {
+      console.error('Erro ao propor plano por IA:', err);
+    } finally {
+      setProposingPlan(false);
+    }
+  };
+
   const monthNames = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
@@ -87,7 +221,8 @@ export default function InsightsPage() {
   // Fetch logged meals
   const fetchLoggedMeals = useCallback(async () => {
     if (isDemo || !firebaseUser) {
-      setLoggedMeals(mockMeals);
+      const localMeals = localStorage.getItem('demo_meals');
+      setLoggedMeals(localMeals ? JSON.parse(localMeals) : mockMeals);
       return;
     }
     try {
@@ -684,6 +819,64 @@ export default function InsightsPage() {
                           : "Consistência adequada. Mantenha o planeamento calórico atual de acordo com o seu perfil nutricional."}
                       </span>
                     </div>
+                  </div>
+
+                  {/* AI Actions & Report inside Insights Panel */}
+                  <div className="bg-ai-indigo/5 border border-ai-indigo/10 rounded-xl p-4 space-y-4">
+                    <p className="text-on-surface text-[12px] leading-5 font-semibold">
+                      Análise Profunda do Calendário com IA
+                    </p>
+
+                    <button
+                      onClick={handleAnalyzeCalendar}
+                      disabled={aiLoading}
+                      className="w-full bg-ai-indigo text-white py-2.5 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                      {aiLoading ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <>
+                          <Sparkles size={12} />
+                          Calcular Progresso & Fadiga com IA
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={handleProposePlan}
+                      disabled={proposingPlan}
+                      className="w-full border border-ai-indigo/20 text-ai-indigo py-2.5 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:bg-ai-indigo/5 active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                      {proposingPlan ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <>
+                          <Sparkles size={12} fill="currentColor" />
+                          Propor Plano do Dia no Calendário
+                        </>
+                      )}
+                    </button>
+
+                    {aiReport && (
+                      <div className="space-y-3 pt-3 border-t border-ai-indigo/10 text-[11px] leading-4 page-enter">
+                        <div>
+                          <p className="font-bold text-ai-indigo">📈 Progressão e Consistência</p>
+                          <p className="text-on-surface">{aiReport.progression}</p>
+                        </div>
+                        <div>
+                          <p className="font-bold text-ai-indigo">🎯 Projeções de Peso</p>
+                          <p className="text-on-surface">{aiReport.projection}</p>
+                        </div>
+                        <div>
+                          <p className="font-bold text-ai-indigo">🔋 Fadiga e Estado Muscular</p>
+                          <p className="text-on-surface">{aiReport.state}</p>
+                        </div>
+                        <div>
+                          <p className="font-bold text-ai-indigo">💡 Recomendações do Coach</p>
+                          <p className="text-on-surface italic">{aiReport.recommendation}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

@@ -27,7 +27,8 @@ export default function DiaryPage() {
   // 1. Fetch user's meals from Firestore on load
   const fetchMeals = useCallback(async () => {
     if (isDemo || !firebaseUser) {
-      setMeals(mockMeals);
+      const localMeals = localStorage.getItem('demo_meals');
+      setMeals(localMeals ? JSON.parse(localMeals) : mockMeals);
       return;
     }
     setLoadingHistory(true);
@@ -212,6 +213,12 @@ export default function DiaryPage() {
       const currentEvents = local ? JSON.parse(local) : [];
       const updatedEvents = [...currentEvents, calendarEvent];
       localStorage.setItem('demo_events', JSON.stringify(updatedEvents));
+
+      // Save to local storage meals
+      const localMeals = localStorage.getItem('demo_meals');
+      const currentMeals = localMeals ? JSON.parse(localMeals) : [];
+      const updatedMeals = [newMeal, ...currentMeals];
+      localStorage.setItem('demo_meals', JSON.stringify(updatedMeals));
     } else {
       try {
         const { getFirebaseDb } = await import('@/lib/firebase');

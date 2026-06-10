@@ -430,7 +430,8 @@ export default function CalendarPage() {
 
   const fetchLoggedMeals = useCallback(async () => {
     if (isDemo || !firebaseUser) {
-      setLoggedMeals(mockMeals);
+      const localMeals = localStorage.getItem('demo_meals');
+      setLoggedMeals(localMeals ? JSON.parse(localMeals) : mockMeals);
       return;
     }
     try {
@@ -988,111 +989,7 @@ export default function CalendarPage() {
             )}
           </div>
 
-          {/* AI Analysis Tab */}
-          <div className="bg-ai-indigo/5 border border-ai-indigo/10 rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1.5 text-ai-indigo text-[11px] font-bold uppercase tracking-widest">
-                <Sparkles size={12} fill="currentColor" />
-                Predições e Análise da IA
-              </span>
-            </div>
-            <p className="text-on-surface text-[13px] leading-6">
-              Deixe a IA examinar o seu calendário, estimar o seu progresso muscular, calcular fadiga e projetar metas.
-            </p>
 
-            <button
-              onClick={handleAnalyzeCalendar}
-              disabled={aiLoading}
-              className="w-full bg-ai-indigo text-white py-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
-            >
-              {aiLoading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <>
-                  <Sparkles size={14} />
-                  Calcular Progresso & Fadiga
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={handleProposePlan}
-              disabled={proposingPlan}
-              className="w-full border-2 border-ai-indigo/20 text-ai-indigo py-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:bg-ai-indigo/5 active:scale-[0.98] transition-all disabled:opacity-50"
-            >
-              {proposingPlan ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <>
-                  <Sparkles size={14} fill="currentColor" />
-                  Propor Refeições e Treino do Dia
-                </>
-              )}
-            </button>
-
-            {aiReport && (
-              <div className="space-y-4 pt-3 border-t border-ai-indigo/10 text-xs leading-5 page-enter">
-                <div>
-                  <p className="font-bold text-ai-indigo mb-0.5">📈 Progressão e Consistência</p>
-                  <p className="text-on-surface">{aiReport.progression}</p>
-                </div>
-                <div>
-                  <p className="font-bold text-ai-indigo mb-0.5">🎯 Projeções de Peso</p>
-                  <p className="text-on-surface">{aiReport.projection}</p>
-                </div>
-                <div>
-                  <p className="font-bold text-ai-indigo mb-0.5">🔋 Fadiga e Estado Muscular</p>
-                  <p className="text-on-surface">{aiReport.state}</p>
-                </div>
-                <div>
-                  <p className="font-bold text-ai-indigo mb-0.5">💡 Recomendações do Coach</p>
-                  <p className="text-on-surface italic">{aiReport.recommendation}</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Recipe Book Section */}
-          <div className="bg-white border border-outline-variant/30 rounded-xl p-6 shadow-sm space-y-4">
-            <h3 className="font-display text-base font-bold text-on-surface flex items-center gap-2">
-              <BookOpen size={18} className="text-primary" />
-              Livro de Receitas IA
-            </h3>
-            <p className="text-on-surface-variant text-xs">
-              Receitas saudáveis e práticas recomendadas especificamente para o seu perfil.
-            </p>
-
-            <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
-              {filteredRecipes.map((recipe, idx) => (
-                <div key={idx} className="p-3 border rounded-xl space-y-2 hover:bg-surface-container-low transition-colors">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-semibold text-on-surface text-xs leading-5">
-                        {recipe.title}
-                      </p>
-                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mt-0.5">
-                        {recipe.category} • {recipe.time}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                    <strong>Ingredientes:</strong> {recipe.ingredients.slice(0, 70)}...
-                  </p>
-                  <div className="flex justify-between items-center pt-1">
-                    <span className="text-[10px] bg-primary/5 text-primary px-2 py-0.5 rounded font-semibold">
-                      {recipe.calories} kcal
-                    </span>
-                    <button
-                      onClick={() => handleScheduleRecipe(recipe)}
-                      className="text-[11px] text-primary font-bold hover:underline flex items-center gap-1"
-                    >
-                      <Plus size={12} /> Agendar
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
