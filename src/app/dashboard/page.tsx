@@ -11,7 +11,7 @@ import { mockDailySummary, mockCoachInsights } from '@/lib/mock-data';
 import { calculateBMR, calculateTDEE, calculateMacros } from '@/lib/utils';
 
 export default function DashboardPage() {
-  const { profile } = useAuth();
+  const { profile, user: firebaseUser, isDemo } = useAuth();
 
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [proteinConsumed, setProteinConsumed] = useState(0);
@@ -44,58 +44,103 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const today = new Date();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${today.getFullYear()}-${mm}-${dd}`;
+    const fetchTodayStats = async () => {
+      const today = new Date();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const todayStr = `${today.getFullYear()}-${mm}-${dd}`;
 
-    // 1. Calculate from Calendar completed meal events
-    const localEvents = localStorage.getItem('demo_events');
-    const eventsList = localEvents ? JSON.parse(localEvents) : [];
-    
-    let kcal = 0;
-    let prot = 0;
-    let carbs = 0;
-    let fat = 0;
+      let eventsList: any[] = [];
+      let mealsList: any[] = [];
 
-    const todayCompletedMeals = eventsList.filter(
-      (e: any) => e.dateStr === todayStr && e.type === 'meal' && e.completed
-    );
+      if (isDemo || !firebaseUser) {
+        // 1. Calculate from local storage fallbacks in demo mode
+        const localEvents = localStorage.getItem('demo_events');
+        eventsList = localEvents ? JSON.parse(localEvents) : [];
 
-    todayCompletedMeals.forEach((m: any) => {
-      const kcalMatch = m.title.match(/(\d+)\s*kcal/) || (m.description && m.description.match(/(\d+)\s*kcal/));
-      kcal += kcalMatch ? parseInt(kcalMatch[1]) : 400;
+        const localMeals = localStorage.getItem('demo_meals');
+        mealsList = localMeals ? JSON.parse(localMeals) : [];
+      } else {
+        // 2. Fetch from Firestore for logged-in users
+        try {
+          const { getFirebaseDb } = await import('@/lib/firebase');
+          const { collection, query, where, getDocs } = await import('firebase/firestore');
+          const db = getFirebaseDb();
 
-      const pMatch = m.description?.match(/P:\s*(\d+)g/) || m.description?.match(/Proteína:\s*(\d+)g/);
-      const cMatch = m.description?.match(/C:\s*(\d+)g/) || m.description?.match(/Hidratos:\s*(\d+)g/);
-      const fMatch = m.description?.match(/G:\s*(\d+)g/) || m.description?.match(/Gordura:\s*(\d+)g/);
+          // Fetch all events
+          const eventsQ = query(
+            collection(db, 'events'),
+            where('userId', '==', firebaseUser.uid)
+          );
+          const eventsSnapshot = await getDocs(eventsQ);
+          eventsSnapshot.forEach((doc) => {
+            eventsList.push({ id: doc.id, ...doc.data() });
+          });
+
+          // Fetch all meals
+          const mealsQ = query(
+            collection(db, 'meals'),
+            where('userId', '==', firebaseUser.uid)
+          );
+          const mealsSnapshot = await getDocs(mealsQ);
+          mealsSnapshot.forEach((doc) => {
+            const data = doc.data();
+            mealsList.push({
+              id: doc.id,
+              ...data,
+              date: data.date?.toDate() || new Date()
+            });
+          });
+        } catch (err) {
+          console.error('Erro ao buscar dados do Firestore para o Dashboard:', err);
+        }
+      }
+
+      let kcal = 0;
+      let prot = 0;
+      let carbs = 0;
+      let fat = 0;
+
+      // 1. Sum from today's completed meal events
+      const todayCompletedMeals = eventsList.filter(
+        (e: any) => e.dateStr === todayStr && e.type === 'meal' && e.completed
+      );
+
+      todayCompletedMeals.forEach((m: any) => {
+        const kcalMatch = m.title.match(/(\d+)\s*kcal/) || (m.description && m.description.match(/(\d+)\s*kcal/));
+        kcal += kcalMatch ? parseInt(kcalMatch[1]) : 400;
+
+        const pMatch = m.description?.match(/P:\s*(\d+)g/) || m.description?.match(/Proteína:\s*(\d+)g/);
+        const cMatch = m.description?.match(/C:\s*(\d+)g/) || m.description?.match(/Hidratos:\s*(\d+)g/);
+        const fMatch = m.description?.match(/G:\s*(\d+)g/) || m.description?.match(/Gordura:\s*(\d+)g/);
+        
+        prot += pMatch ? parseInt(pMatch[1]) : 30;
+        carbs += cMatch ? parseInt(cMatch[1]) : 40;
+        fat += fMatch ? parseInt(fMatch[1]) : 10;
+      });
+
+      // 2. Sum from today's logged meals (from diary)
+      const todayMeals = mealsList.filter((m: any) => {
+        const mDate = new Date(m.date);
+        const mStr = `${mDate.getFullYear()}-${String(mDate.getMonth() + 1).padStart(2, '0')}-${String(mDate.getDate()).padStart(2, '0')}`;
+        return mStr === todayStr;
+      });
       
-      prot += pMatch ? parseInt(pMatch[1]) : 30;
-      carbs += cMatch ? parseInt(cMatch[1]) : 40;
-      fat += fMatch ? parseInt(fMatch[1]) : 10;
-    });
+      todayMeals.forEach((m: any) => {
+        kcal += m.calories || 0;
+        prot += m.protein || 0;
+        carbs += m.carbs || 0;
+        fat += m.fat || 0;
+      });
 
-    // 2. Calculate from Diary logged meals
-    const localMeals = localStorage.getItem('demo_meals');
-    const mealsList = localMeals ? JSON.parse(localMeals) : [];
-    const todayMeals = mealsList.filter((m: any) => {
-      const mDate = new Date(m.date);
-      const mStr = `${mDate.getFullYear()}-${String(mDate.getMonth() + 1).padStart(2, '0')}-${String(mDate.getDate()).padStart(2, '0')}`;
-      return mStr === todayStr;
-    });
-    
-    todayMeals.forEach((m: any) => {
-      kcal += m.calories || 0;
-      prot += m.protein || 0;
-      carbs += m.carbs || 0;
-      fat += m.fat || 0;
-    });
+      setCaloriesConsumed(kcal);
+      setProteinConsumed(prot);
+      setCarbsConsumed(carbs);
+      setFatConsumed(fat);
+    };
 
-    setCaloriesConsumed(kcal);
-    setProteinConsumed(prot);
-    setCarbsConsumed(carbs);
-    setFatConsumed(fat);
-  }, []);
+    fetchTodayStats();
+  }, [firebaseUser, isDemo]);
 
   const summary = {
     ...mockDailySummary,
