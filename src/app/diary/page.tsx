@@ -1,68 +1,146 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
-import { Camera, Upload, Check, Pencil, X, Loader2 } from 'lucide-react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Camera, Upload, Check, Pencil, X, Loader2, Utensils } from 'lucide-react';
 import { CoachInsight } from '@/components/dashboard/CoachInsight';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { mockMeals } from '@/lib/mock-data';
-import type { NutritionAnalysis } from '@/lib/types';
+import type { NutritionAnalysis, Meal } from '@/lib/types';
 import { cn } from '@/lib/utils';
-
-const mockAnalysis: NutritionAnalysis = {
-  foods: [
-    { name: 'Peito de frango grelhado', quantity: '150g' },
-    { name: 'Arroz integral', quantity: '100g' },
-    { name: 'Brócolos cozidos', quantity: '80g' },
-  ],
-  calories: 450,
-  protein: 42,
-  carbs: 55,
-  fat: 8,
-  feedback:
-    'Ótima fonte de proteína magra! Boa escolha de carboidratos complexos. Considere adicionar azeite para gorduras saudáveis.',
-};
 
 type DiaryState = 'upload' | 'analyzing' | 'result' | 'history';
 
 export default function DiaryPage() {
+  const { profile, user: firebaseUser, isDemo } = useAuth();
   const [state, setState] = useState<DiaryState>('upload');
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<NutritionAnalysis | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [savedImageUrl, setSavedImageUrl] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) return;
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    setState('analyzing');
-
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadend = async () => {
-      try {
-        const base64data = reader.result as string;
-        const res = await fetch('/api/analyze-meal', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ image: base64data }),
+  // 1. Fetch user's meals from Firestore on load
+  const fetchMeals = useCallback(async () => {
+    if (isDemo || !firebaseUser) {
+      setMeals(mockMeals);
+      return;
+    }
+    setLoadingHistory(true);
+    try {
+      const { getFirebaseDb } = await import('@/lib/firebase');
+      const { collection, query, where, getDocs, orderBy } = await import('firebase/firestore');
+      const db = getFirebaseDb();
+      const q = query(
+        collection(db, 'meals'),
+        where('userId', '==', firebaseUser.uid),
+        orderBy('date', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const loadedMeals: Meal[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        loadedMeals.push({
+          id: doc.id,
+          userId: data.userId,
+          imageUrl: data.imageUrl || '',
+          foods: data.foods || [],
+          calories: data.calories || 0,
+          protein: data.protein || 0,
+          carbs: data.carbs || 0,
+          fat: data.fat || 0,
+          feedback: data.feedback || '',
+          date: data.date?.toDate() || new Date(),
+          confirmed: data.confirmed || false,
+          mealType: data.mealType || 'lunch',
         });
-        const data = await res.json();
-        if (data.success && data.data) {
-          setAnalysis(data.data);
-          setState('result');
-        } else {
-          throw new Error(data.error || 'Falha na análise');
+      });
+      setMeals(loadedMeals.length > 0 ? loadedMeals : mockMeals);
+    } catch (err) {
+      console.error('Erro ao carregar refeições:', err);
+      setMeals(mockMeals);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [firebaseUser, isDemo]);
+
+  useEffect(() => {
+    fetchMeals();
+  }, [fetchMeals]);
+
+  // 2. Handle image analysis and upload
+  const handleFile = useCallback(
+    async (file: File) => {
+      if (!file.type.startsWith('image/')) return;
+      const localUrl = URL.createObjectURL(file);
+      setPreview(localUrl);
+      setState('analyzing');
+      setUploadingImage(true);
+
+      let storageUrl = '';
+
+      // Upload to Firebase Storage if not in demo mode
+      if (!isDemo && firebaseUser) {
+        try {
+          const { getFirebaseStorage } = await import('@/lib/firebase');
+          const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+          const storage = getFirebaseStorage();
+          const imageRef = ref(storage, `meals/${firebaseUser.uid}/${Date.now()}_${file.name}`);
+          const snapshot = await uploadBytes(imageRef, file);
+          storageUrl = await getDownloadURL(snapshot.ref);
+          setSavedImageUrl(storageUrl);
+        } catch (err) {
+          console.error('Erro no upload para o Storage, usando local preview:', err);
+          setSavedImageUrl(localUrl);
         }
-      } catch (err) {
-        console.error(err);
-        // Fallback to static mock if offline or failed
-        setAnalysis(mockAnalysis);
-        setState('result');
+      } else {
+        setSavedImageUrl(localUrl);
       }
-    };
-  }, []);
+      setUploadingImage(false);
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = async () => {
+        try {
+          const base64data = reader.result as string;
+          const res = await fetch('/api/analyze-meal', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ image: base64data }),
+          });
+          const data = await res.json();
+          if (data.success && data.data) {
+            setAnalysis(data.data);
+            setState('result');
+          } else {
+            throw new Error(data.error || 'Falha na análise');
+          }
+        } catch (err) {
+          console.error(err);
+          // Fallback to static mock if offline or failed
+          setAnalysis({
+            foods: [
+              { name: 'Peito de frango grelhado', quantity: '150g' },
+              { name: 'Arroz integral', quantity: '100g' },
+              { name: 'Brócolos cozidos', quantity: '80g' },
+            ],
+            calories: 450,
+            protein: 42,
+            carbs: 55,
+            fat: 8,
+            feedback: 'Ótima fonte de proteína magra! Boa escolha de carboidratos complexos.',
+          });
+          setState('result');
+        }
+      };
+    },
+    [firebaseUser, isDemo]
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -74,7 +152,41 @@ export default function DiaryPage() {
     [handleFile]
   );
 
-  const handleConfirm = () => {
+  // 3. Confirm and save meal log
+  const handleConfirm = async () => {
+    if (!analysis) return;
+
+    // Detect meal type based on hour
+    const hour = new Date().getHours();
+    const mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' =
+      hour < 11 ? 'breakfast' : hour < 16 ? 'lunch' : hour < 20 ? 'dinner' : 'snack';
+
+    const newMeal = {
+      userId: firebaseUser?.uid || 'demo-user-001',
+      imageUrl: savedImageUrl || preview || '',
+      foods: analysis.foods,
+      calories: analysis.calories,
+      protein: analysis.protein,
+      carbs: analysis.carbs,
+      fat: analysis.fat,
+      feedback: analysis.feedback,
+      date: new Date(),
+      confirmed: true,
+      mealType,
+    };
+
+    if (!isDemo && firebaseUser) {
+      try {
+        const { getFirebaseDb } = await import('@/lib/firebase');
+        const { collection, addDoc } = await import('firebase/firestore');
+        const db = getFirebaseDb();
+        await addDoc(collection(db, 'meals'), newMeal);
+      } catch (err) {
+        console.error('Erro ao guardar refeição no Firestore:', err);
+      }
+    }
+
+    await fetchMeals();
     setState('history');
   };
 
@@ -82,6 +194,7 @@ export default function DiaryPage() {
     setState('upload');
     setPreview(null);
     setAnalysis(null);
+    setSavedImageUrl('');
   };
 
   return (
@@ -149,10 +262,10 @@ export default function DiaryPage() {
                 <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center gap-4 ambient-shadow">
                   <Loader2 size={40} className="text-primary animate-spin" />
                   <p className="font-display text-lg font-semibold text-primary">
-                    A analisar a sua refeição...
+                    {uploadingImage ? 'A carregar foto para a nuvem...' : 'A analisar a refeição...'}
                   </p>
                   <p className="text-on-surface-variant text-sm">
-                    A IA está a identificar os alimentos
+                    A IA está a processar os dados nutricionais
                   </p>
                 </div>
               </div>
@@ -253,36 +366,55 @@ export default function DiaryPage() {
           </div>
 
           <h3 className="font-display text-lg font-semibold text-on-surface">
-            Refeições de Hoje
+            Histórico de Refeições
           </h3>
 
-          {mockMeals.map((meal) => (
-            <div
-              key={meal.id}
-              className="bg-white border border-outline-variant/30 rounded-xl p-4 flex items-center justify-between"
-            >
-              <div>
-                <p className="font-semibold text-on-surface text-[15px] capitalize">
-                  {meal.mealType === 'breakfast'
-                    ? '🌅 Pequeno-almoço'
-                    : meal.mealType === 'lunch'
-                    ? '🍽️ Almoço'
-                    : meal.mealType === 'dinner'
-                    ? '🌙 Jantar'
-                    : '🍎 Snack'}
-                </p>
-                <p className="text-on-surface-variant text-sm">
-                  {meal.foods.map((f) => f.name).join(', ')}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-display text-lg font-semibold text-primary">
-                  {meal.calories}
-                </p>
-                <p className="text-xs text-on-surface-variant">kcal</p>
-              </div>
+          {loadingHistory ? (
+            <div className="py-10 flex justify-center">
+              <Loader2 size={24} className="text-primary animate-spin" />
             </div>
-          ))}
+          ) : (
+            <div className="space-y-4">
+              {meals.map((meal) => (
+                <div
+                  key={meal.id}
+                  className="bg-white border border-outline-variant/30 rounded-xl p-4 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    {meal.imageUrl ? (
+                      <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border">
+                        <img src={meal.imageUrl} alt="Refeição" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="bg-secondary-container/30 p-2 rounded-lg">
+                        <Utensils size={18} className="text-on-secondary-container" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-on-surface text-[15px] capitalize">
+                        {meal.mealType === 'breakfast'
+                          ? '🌅 Pequeno-almoço'
+                          : meal.mealType === 'lunch'
+                          ? '🍽️ Almoço'
+                          : meal.mealType === 'dinner'
+                          ? '🌙 Jantar'
+                          : '🍎 Snack'}
+                      </p>
+                      <p className="text-on-surface-variant text-sm max-w-[280px] truncate">
+                        {meal.foods.map((f) => f.name).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-display text-lg font-semibold text-primary">
+                      {meal.calories}
+                    </p>
+                    <p className="text-xs text-on-surface-variant">kcal</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <button
             onClick={resetUpload}
